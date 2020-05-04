@@ -40,15 +40,20 @@ void ADXL355::spi_multibyte_read(byte* buf, int buffersize, byte startaddress)
   SPI.endTransaction();
 }
 
-void ADXL355::begin(byte range, byte filter=ADXL355_FILTER_OFF)
+boolean ADXL355::begin(byte range, byte filter=ADXL355_FILTER_OFF)
 {
   this->range = range;
+  pinMode(chipselect, OUTPUT);
+  digitalWrite(chipselect, LOW);
+  
   spi_writebyte(ADXL355__REG_RESET, 0x00);
   spi_writebyte(ADXL355__REG_RANGE, range);
   spi_writebyte(ADXL355__REG_FILTER, filter);
   spi_writebyte(ADXL355__REG_POWER_CONTROL, AXL355__CONST_MEASURE_MODE);
-  pinMode(chipselect, OUTPUT);
+  byte adbyte = spi_readbyte(0x00);
+  
   digitalWrite(chipselect, HIGH);
+  return adbyte == 0xAD;
 }
 
 void ADXL355::takeSample()

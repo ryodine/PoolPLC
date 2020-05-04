@@ -46,7 +46,7 @@ class ADXL355 {
   public:
     ADXL355(int cs, int speed=9000000) 
       : chipselect(cs), settings(SPISettings(speed, MSBFIRST, SPI_MODE0)) {};
-    void begin(byte range, byte filter=ADXL355_FILTER_OFF);
+    boolean begin(byte range, byte filter=ADXL355_FILTER_OFF);
     void takeSample();
     ADXL355Measurement getSample();
 };
