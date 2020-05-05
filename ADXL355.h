@@ -44,7 +44,7 @@ class ADXL355 {
     byte spi_readbyte(byte address);
     
   public:
-    ADXL355(int cs, int speed=9000000) 
+    ADXL355(int cs, int speed=5000000) 
       : chipselect(cs), settings(SPISettings(speed, MSBFIRST, SPI_MODE0)) {};
     boolean begin(byte range, byte filter=ADXL355_FILTER_OFF);
     void takeSample();

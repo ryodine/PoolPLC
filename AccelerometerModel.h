@@ -9,19 +9,29 @@
 using namespace Eigen;
 
 typedef struct {
-  double x;
-  double y;
-  double z;
+  double m00;
+  double m01;
+  double m02;
+  double m10;
+  double m11;
+  double m12;
+  double m20;
+  double m21;
+  double m22;
 } AccelerometerModelZeropoint;
 
 
 class AccelerometerModel {
   private:
     Matrix3d baseFrame;
-    Vector3d zeroedForceVec;
+    Matrix3d zeroFrame;
+
+    Matrix3d getFrameFromMeasurement(Vector3d measurement);
 
   public:
-    AccelerometerModel() : baseFrame(AngleAxisd(0, Vector3d::UnitX()) * AngleAxisd(0, Vector3d::UnitY()) * AngleAxisd(0, Vector3d::UnitZ())) {};
+    AccelerometerModel() : baseFrame(AngleAxisd(0, Vector3d::UnitX()) * AngleAxisd(0, Vector3d::UnitY()) * AngleAxisd(0, Vector3d::UnitZ())),
+      zeroFrame(AngleAxisd(0, Vector3d::UnitX()) * AngleAxisd(0, Vector3d::UnitY()) * AngleAxisd(0, Vector3d::UnitZ())) {};
+    
     // Config
     void importZero(AccelerometerModelZeropoint data);
     AccelerometerModelZeropoint setMeasurementAsZero(Vector3d measurement);

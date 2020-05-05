@@ -1,24 +1,35 @@
+#include <SPI.h>
+#include <Controllino.h>
 #include <stlport.h>
 #include <Eigen30.h>
 #include <Eigen/Geometry>
 #include <Eigen/Core>
-
-#include <SPI.h>
-#include <Controllino.h>
-#include "ADXL355.h"
 #include "AccelerometerFiltering.h"
 #include "AccelerometerModel.h"
+#include "ADXL355.h"
+#include "HighestCornerAlgorithm.h"
 
 #define STATUS_FLASH_PIN CONTROLLINO_D0
 #define ZERO_BUTTON CONTROLLINO_A0
 
+#define OUT_TR CONTROLLINO_D16
+#define OUT_TL CONTROLLINO_D17
+#define OUT_BL CONTROLLINO_D18
+#define OUT_BR CONTROLLINO_D19
+
 ADXL355 accel(CONTROLLINO_D4);
-AccelerometerFilterMovingAverage ewmaFilter(0, 0.2);
+AccelerometerFilterMovingAverage ewmaFilter(0, 0.25);
 AccelerometerModel accelModel;
+HighestCornerAlgo cornerAlgo(2.5 / 180.0 * PI, 5.0 / 180.0 * PI);
 
 void setup() {
   // put your setup code here, to run once:
   pinMode(STATUS_FLASH_PIN, OUTPUT);
+  pinMode(OUT_TR, OUTPUT);
+  pinMode(OUT_BR, OUTPUT);
+  pinMode(OUT_TL, OUTPUT);
+  pinMode(OUT_BL, OUTPUT);
+  
   pinMode(ZERO_BUTTON, INPUT);
   digitalWrite(STATUS_FLASH_PIN, HIGH);
   
@@ -34,6 +45,10 @@ void setup() {
   Serial.println("ADXL355 Initialized");
 
   delay(200);
+
+  //Allows a preconfigured offset (useful for YAW)
+  //All rotations are in Roll-Pitch-Yaw (Left to right).
+  accelModel.setBaseFrameAnglesRadians(Eigen::Vector3d(0,0,0));
 }
 
 void loop() {
@@ -48,55 +63,17 @@ void loop() {
   Serial.print(angles[0] * 180.0 / PI);
   Serial.print("\t");
   Serial.print(angles[1] * 180.0 / PI);
-  Serial.print("\t");
-  Serial.print(digitalRead(ZERO_BUTTON));
   Serial.println();
-  /*Vect3D vect = UnitVectorizeMeasurement::vectorize(measure);
 
-  double pitch = atan(vect.components[1]/vect.components[2]);
-  double roll = atan((-vect.components[0])/sqrt(pow(vect.components[1], 2)+pow(vect.components[2], 2)));*/
+  cornerAlgo.update(angles[0], angles[1]);
 
-  /*Serial.print(pitch * 180.0 / PI);
-  Serial.print("\t");
-  Serial.print(roll  * 180.0 / PI);
-  Serial.print("\t");
-  Serial.println();*/
+  digitalWrite(OUT_TR, cornerAlgo.getCorner(0));
+  digitalWrite(OUT_TL, cornerAlgo.getCorner(1));
+  digitalWrite(OUT_BL, cornerAlgo.getCorner(2));
+  digitalWrite(OUT_BR, cornerAlgo.getCorner(3));
 
-  /*Eigen::Matrix3d m_0;
-  m_0 = Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(PI/2.0, Eigen::Vector3d::UnitZ());
-
-  Eigen::Matrix3d m;
-  m = Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitZ());*/
-  /*for (int i = 0; i < 3; i++) {
-    Serial.print(m_0(i,0));
-    Serial.print("\t");
-    Serial.print(m_0(i,1));
-    Serial.print("\t");
-    Serial.print(m_0(i,2));
-    Serial.print("\n");
+  if (!digitalRead(ZERO_BUTTON)) {
+    //accelModel.setMeasurementAsZero(Eigen::Vector3d(measure.x, measure.y, measure.z));
   }
-  Serial.println();*/
-
-  /*Eigen::Matrix3d m_1;
-  m_1 = Eigen::AngleAxisd(PI/4, Eigen::Vector3d::UnitX())*Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY())*Eigen::AngleAxisd(0, Eigen::Vector3d::UnitZ());
-  
-  Eigen::Vector3d ea = (m_1*m).eulerAngles(0, 1, 2);
-  Serial.print(ea[0] * 180.0 / PI);
-  Serial.print("\t");
-  Serial.print(ea[1] * 180.0 / PI);
-  Serial.print("\t");
-
-  Eigen::Vector3d ea2 = (m).eulerAngles(0, 1, 2);
-  Serial.print(ea2[0] * 180.0 / PI);
-  Serial.print("\t");
-  Serial.print(ea2[1] * 180.0 / PI);
-  Serial.print("\t");
-  Serial.println("");*/
-  
-  /*Serial.print(vect.components[0]/16.0);
-  Serial.print("\t");
-  Serial.print(vect.components[1]/16.0);
-  Serial.print("\t");
-  Serial.print(vect.components[2]/16.0);
-  Serial.println("");*/
+  delay(50);
 }

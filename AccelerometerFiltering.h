@@ -1,6 +1,7 @@
 #ifndef ACCELEROMETER_FILTERING_GUARD_H
 #define ACCELEROMETER_FILTERING_GUARD_H
 #include "MovingAverage.h"
+#include "ADXL355.h"
 
 class AccelerometerFilterMovingAverage {
   public:
@@ -21,7 +22,7 @@ class AccelerometerFilterMovingAverage {
   private:
     MovingAverage avgs[3];
 };
-
+/*
 class Vect3D {
   public:
     double components[3];
@@ -34,6 +35,6 @@ class UnitVectorizeMeasurement {
       double scale = sqrt(pow(measure.x/16.0, 2) + pow(measure.y/16.0, 2) + pow(measure.z/16.0, 2));
       return Vect3D(measure.x/scale, measure.y/scale, measure.z/scale);
     }
-};
+};*/
 
 #endif
