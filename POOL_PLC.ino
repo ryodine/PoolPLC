@@ -18,7 +18,7 @@
 #define OUT_BR CONTROLLINO_D19
 
 ADXL355 accel(CONTROLLINO_D4);
-AccelerometerFilterMovingAverage ewmaFilter(0, 0.25);
+AccelerometerFilterMovingAverage ewmaFilter(0, 0.15);
 AccelerometerModel accelModel;
 HighestCornerAlgo cornerAlgo(2.5 / 180.0 * PI, 5.0 / 180.0 * PI);
 
@@ -35,7 +35,8 @@ void setup() {
   
   SPI.begin();
   Serial.begin(9600);
-  while (!accel.begin(ADXL355_RANGE_2G, ADXL355_FILTER_LPF_LOW_FREQ)) {
+  // ADXL355_FILTER_LPF_LOW_FREQ
+  while (!accel.begin(ADXL355_RANGE_2G, ADXL355_FILTER_LPF_16HZ_ODR)) {
     digitalWrite(STATUS_FLASH_PIN, LOW);
     delay(100);
     digitalWrite(STATUS_FLASH_PIN, HIGH);
@@ -52,28 +53,32 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  accel.takeSample();
-
-  ADXL355Measurement measure = accel.getSample();
-  ewmaFilter.addData(measure);
-  measure = ewmaFilter.getAverage();
-
-  Eigen::Vector2d angles = accelModel.calculate(Eigen::Vector3d(measure.x, measure.y, measure.z));
-  Serial.print(angles[0] * 180.0 / PI);
-  Serial.print("\t");
-  Serial.print(angles[1] * 180.0 / PI);
-  Serial.println();
-
-  cornerAlgo.update(angles[0], angles[1]);
-
-  digitalWrite(OUT_TR, cornerAlgo.getCorner(0));
-  digitalWrite(OUT_TL, cornerAlgo.getCorner(1));
-  digitalWrite(OUT_BL, cornerAlgo.getCorner(2));
-  digitalWrite(OUT_BR, cornerAlgo.getCorner(3));
+  ADXL355Measurement measure;
+  if (accel.dataReady()) {
+    accel.takeSample();
+  
+    measure = accel.getSample();
+    ewmaFilter.addData(measure);
+    measure = ewmaFilter.getAverage();
+  
+    Eigen::Vector2d angles = accelModel.calculate(Eigen::Vector3d(measure.x, measure.y, measure.z));
+    Serial.print(angles[0] * 180.0 / PI);
+    Serial.print("\t");
+    Serial.print(angles[1] * 180.0 / PI);
+    Serial.println();
+  
+    cornerAlgo.update(angles[0], angles[1]);
+  
+    digitalWrite(OUT_TR, cornerAlgo.getCorner(0));
+    digitalWrite(OUT_TL, cornerAlgo.getCorner(1));
+    digitalWrite(OUT_BL, cornerAlgo.getCorner(2));
+    digitalWrite(OUT_BR, cornerAlgo.getCorner(3));
+  }
 
   if (!digitalRead(ZERO_BUTTON)) {
-    //accelModel.setMeasurementAsZero(Eigen::Vector3d(measure.x, measure.y, measure.z));
+    accelModel.setMeasurementAsZero(Eigen::Vector3d(measure.x, measure.y, measure.z));
   }
-  delay(50);
+
+  // avoid thrashing the sensor too much
+  delay(10);
 }

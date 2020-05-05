@@ -57,7 +57,7 @@ boolean ADXL355::begin(byte range, byte filter=ADXL355_FILTER_OFF)
 }
 
 void ADXL355::takeSample()
-{
+{ 
   byte bytebuf[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
   spi_multibyte_read(bytebuf, 9, ADXL355__REG_ACCELEROMETER_DATA_BEGIN);
   
@@ -87,4 +87,9 @@ ADXL355Measurement ADXL355::getSample()
   measure.z = axes[2] / (1.0*scale);
 
   return measure;
+}
+
+byte ADXL355::getStatus()
+{
+  return spi_readbyte(ADXL255__REG_STATUS);
 }
