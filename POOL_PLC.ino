@@ -12,6 +12,8 @@
 
 #define STATUS_FLASH_PIN CONTROLLINO_D0
 #define ZERO_BUTTON CONTROLLINO_A0
+#define RAISE_BUTTON CONTROLLINO_A1
+#define LOWER_BUTTON CONTROLLINO_A2
 
 #define OUT_TR CONTROLLINO_D16
 #define OUT_TL CONTROLLINO_D17
@@ -39,6 +41,8 @@ void setup() {
   pinMode(OUT_BL, OUTPUT);
   
   pinMode(ZERO_BUTTON, INPUT);
+  pinMode(RAISE_BUTTON, INPUT);
+  pinMode(LOWER_BUTTON, INPUT);
   digitalWrite(STATUS_FLASH_PIN, HIGH);
   
   SPI.begin();
@@ -57,6 +61,13 @@ void setup() {
 }
 
 void loop() {
+
+  // Determine if raising or lowering
+  bool raising = digitalRead(RAISE_BUTTON);
+  bool lowering = digitalRead(LOWER_BUTTON);
+  raising = raising && !lowering;
+  lowering = lowering && !raising;
+  
 
   // This just runs the periodic error flasher code
   faultHandler->faultFlasherPeriodic(STATUS_FLASH_PIN);
@@ -91,12 +102,12 @@ void loop() {
     // Pass the calculated angles into the highest corner finding algorithm
     cornerAlgo.update(angles[0], angles[1]);
 
-    // Control the solenoids, if no faults
-    if (!faultHandler->hasFault()) {
-      digitalWrite(OUT_TR, cornerAlgo.getCorner(0));
-      digitalWrite(OUT_TL, cornerAlgo.getCorner(1));
-      digitalWrite(OUT_BL, cornerAlgo.getCorner(2));
-      digitalWrite(OUT_BR, cornerAlgo.getCorner(3));
+    // Control the solenoids, if no faults and in raise or lower mode
+    if (!faultHandler->hasFault() && (raising || lowering)) {
+      digitalWrite(OUT_TR, cornerAlgo.getCorner(0, lowering));
+      digitalWrite(OUT_TL, cornerAlgo.getCorner(1, lowering));
+      digitalWrite(OUT_BL, cornerAlgo.getCorner(2, lowering));
+      digitalWrite(OUT_BR, cornerAlgo.getCorner(3, lowering));
     }
     
   } else {
@@ -107,7 +118,7 @@ void loop() {
   }
 
   // if there are faults, do not control the solenoids.
-  if (faultHandler->hasFault()) {
+  if (faultHandler->hasFault() || !(raising || lowering)) {
     digitalWrite(OUT_TR, LOW);
     digitalWrite(OUT_TL, LOW);
     digitalWrite(OUT_BL, LOW);

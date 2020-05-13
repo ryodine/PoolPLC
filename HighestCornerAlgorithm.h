@@ -7,7 +7,9 @@ class HighestCornerAlgo {
       : corners({false, false, false, false}), lowerbound(hystLow), upperbound(hystHigh) {};
     void update(double roll, double pitch);
 
-    bool getCorner(unsigned int corner) { return corners[corner]; };
+    bool getCorner(unsigned int corner, bool lowestCornerMode=false) { 
+      return corners[(((lowestCornerMode)? 2 : 0) + corner) % 4]; 
+    };
     
   private:
     bool corners[4];
