@@ -22,12 +22,12 @@
 
 Fault::Handler* faultHandler;
 ADXL355 accel(CONTROLLINO_D4);
-AccelerometerFilterMovingAverage ewmaFilter(0, 0.05);
+AccelerometerFilterMovingAverage ewmaFilter(0, 0.1);
 AccelerometerModel accelModel;
 HighestCornerAlgo cornerAlgo(2.5 / 180.0 * PI, 5.0 / 180.0 * PI);
 
 // Accelerometer implausibility check constants and counters
-const int max_accel_retries = 10;
+const int max_accel_retries = 100;
 const double accel_max_gravity_deviation_fraction = 0.5;
 int accelBusyCounter = 0;
 
@@ -48,7 +48,7 @@ void setup() {
   SPI.begin();
   Serial.begin(9600);
   // ADXL355_FILTER_LPF_LOW_FREQ
-  if (!accel.begin(ADXL355_RANGE_2G, ADXL355_FILTER_LPF_16HZ_ODR)) {
+  if (!accel.begin(ADXL355_RANGE_2G, ADXL355_FILTER_LPF_4HZ_ODR)) {
     faultHandler->setFaultCode(Fault::ACCEL_INIT);
   }
 
@@ -74,49 +74,51 @@ void loop() {
   
   ADXL355Measurement measure;
 
-  // Check if there is data ready on the accelerometer
-  if (accel.dataReady()) {
-
-    // If the accelerometer has data ready, then we can safely unlatch & reset the no data ready fault
-    faultHandler->unlatchFaultCode(Fault::ACCEL_NOT_READY);
-    accelBusyCounter = 0;
-
-    // Sample the accelerometer
-    accel.takeSample();
-    measure = accel.getSample();
-
-    // Magnitude plausibility check
-    magnitudePlausibilityCheck(measure);
-
-    // Filter the data with an Expoentially Weighted Moving Average
-    ewmaFilter.addData(measure);
-    measure = ewmaFilter.getAverage();
-
-    // Calculate the angles from the data using the mathematical model
-    Eigen::Vector2d angles = accelModel.calculate(Eigen::Vector3d(measure.x, measure.y, measure.z));
-    Serial.print(angles[0] * 180.0 / PI);
-    Serial.print("\t");
-    Serial.print(angles[1] * 180.0 / PI);
-    Serial.println();
-
-    // Pass the calculated angles into the highest corner finding algorithm
-    cornerAlgo.update(angles[0], angles[1]);
-
-    // Control the solenoids, if no faults and in raise or lower mode
-    if (!faultHandler->hasFault() && (raising || lowering)) {
-      digitalWrite(OUT_TR, cornerAlgo.getCorner(0, lowering));
-      digitalWrite(OUT_TL, cornerAlgo.getCorner(1, lowering));
-      digitalWrite(OUT_BL, cornerAlgo.getCorner(2, lowering));
-      digitalWrite(OUT_BR, cornerAlgo.getCorner(3, lowering));
-    }
-    
-  } else {
-    // If there isn't data ready for max_accel_retries tries, then register an temporary fault.
-    if (accelBusyCounter++ > max_accel_retries) {
-      faultHandler->setFaultCode(Fault::ACCEL_NOT_READY);
+  if ((raising || lowering)) {
+    // Check if there is data ready on the accelerometer
+    if (accel.dataReady()) {
+  
+      // If the accelerometer has data ready, then we can safely unlatch & reset the no data ready fault
+      faultHandler->unlatchFaultCode(Fault::ACCEL_NOT_READY);
+      accelBusyCounter = 0;
+  
+      // Sample the accelerometer
+      accel.takeSample();
+      measure = accel.getSample();
+  
+      // Magnitude plausibility check
+      magnitudePlausibilityCheck(measure);
+  
+      // Filter the data with an Expoentially Weighted Moving Average
+      ewmaFilter.addData(measure);
+      measure = ewmaFilter.getAverage();
+  
+      // Calculate the angles from the data using the mathematical model
+      Eigen::Vector2d angles = accelModel.calculate(Eigen::Vector3d(measure.x, measure.y, measure.z));
+      Serial.print(angles[0] * 180.0 / PI);
+      Serial.print("\t");
+      Serial.print(angles[1] * 180.0 / PI);
+      Serial.println();
+  
+      // Pass the calculated angles into the highest corner finding algorithm
+      cornerAlgo.update(angles[0], angles[1]);
+  
+      // Control the solenoids, if no faults and in raise or lower mode
+      if (!faultHandler->hasFault()) {
+        digitalWrite(OUT_TR, cornerAlgo.getCorner(0, lowering));
+        digitalWrite(OUT_TL, cornerAlgo.getCorner(1, lowering));
+        digitalWrite(OUT_BL, cornerAlgo.getCorner(2, lowering));
+        digitalWrite(OUT_BR, cornerAlgo.getCorner(3, lowering));
+      }
+      
+    } else {
+      // If there isn't data ready for max_accel_retries tries, then register an temporary fault.
+      if (accelBusyCounter++ > max_accel_retries) {
+        faultHandler->setFaultCode(Fault::ACCEL_NOT_READY);
+      }
     }
   }
-
+  
   // if there are faults, do not control the solenoids.
   if (faultHandler->hasFault() || !(raising || lowering)) {
     digitalWrite(OUT_TR, LOW);
@@ -124,10 +126,26 @@ void loop() {
     digitalWrite(OUT_BL, LOW);
     digitalWrite(OUT_BR, LOW);
   }
-
+  
   // Check if the user wanted to zero the accelerometers
-  if (!digitalRead(ZERO_BUTTON)) {
-    accelModel.setMeasurementAsZero(Eigen::Vector3d(measure.x, measure.y, measure.z));
+  if (!digitalRead(ZERO_BUTTON) && !(raising || lowering)) {
+    //for (int i = 0; i < 10 && !accel.dataReady(); i++) {delay(100);}
+    if (accel.dataReady()) {
+      accel.takeSample();
+      measure = accel.getSample();
+      accelModel.setMeasurementAsZero(Eigen::Vector3d(measure.x, measure.y, measure.z));
+      faultHandler->unlatchFaultCode(Fault::ACCEL_NOT_READY);
+      digitalWrite(STATUS_FLASH_PIN, LOW);
+      delay(100);
+      digitalWrite(STATUS_FLASH_PIN, HIGH);
+      delay(100);
+      digitalWrite(STATUS_FLASH_PIN, LOW);
+      delay(100);
+      digitalWrite(STATUS_FLASH_PIN, HIGH);
+    } else {
+      faultHandler->setFaultCode(Fault::ACCEL_NOT_READY);
+    }
+    delay(100);
   }
 
   // avoid thrashing the sensor too much
