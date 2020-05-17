@@ -28,20 +28,5 @@ class AccelerometerFilterMovingAverage {
   private:
     MovingAverage avgs[3];
 };
-/*
-class Vect3D {
-  public:
-    double components[3];
-    Vect3D(double x, double y, double z) : components({x, y, z}) {};
-};
-
-class UnitVectorizeMeasurement {
-  public:
-    static Vect3D vectorize(ADXL355Measurement measure) {
-      double scale = sqrt(pow(measure.x/16.0, 2) + pow(measure.y/16.0, 2) +
-pow(measure.z/16.0, 2)); return Vect3D(measure.x/scale, measure.y/scale,
-measure.z/scale);
-    }
-};*/
 
 #endif
