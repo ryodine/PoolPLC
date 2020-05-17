@@ -1,0 +1,28 @@
+#ifndef ADLX355_INCLINOMETER_MODULE_H
+#define ADLX355_INCLINOMETER_MODULE_H
+
+#include "ADXL355.h"
+#include "AccelerometerFiltering.h"
+#include "InclinometerInterface.h"
+
+namespace Inclinometer {
+class ADXL355Inclinometer : public InclinometerDataSource {
+  public:
+    ADXL355Inclinometer(int cs, double ewmaAlpha = 0.1,
+                        byte filter = ADXL355_FILTER_LPF_4HZ_ODR,
+                        int speed = 5000000)
+        : accel(cs, speed), filter(filter),
+          movingAverageFilter(0.0, ewmaAlpha){};
+
+    bool begin() { return accel.begin(ADXL355_RANGE_2G, filter); }
+    bool hasData() { return accel.dataReady(); };
+    Eigen::Vector2d getData();
+
+  private:
+    ADXL355 accel;
+    AccelerometerFilterMovingAverage movingAverageFilter;
+    byte filter;
+};
+}; // namespace Inclinometer
+
+#endif

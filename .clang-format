@@ -1,0 +1,25 @@
+﻿---
+BreakBeforeBraces: Stroustrup
+IndentWidth: 4
+Language: Cpp
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: 'false'
+SpacesInCStyleCastParentheses: 'false'
+SpacesInParentheses: 'false'
+SpacesInSquareBrackets: 'false'
+Standard: Auto
+AlignConsecutiveMacros: true
+
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:           '(<stlport\.h>)'
+    Priority:        2
+  - Regex:           '(<Eigen30\.h>)'
+    Priority:        3
+  - Regex:           '<.*>'
+    Priority:        4
+  - Regex:           '.*'
+    Priority:        1
+    SortPriority:    0
+
+...
