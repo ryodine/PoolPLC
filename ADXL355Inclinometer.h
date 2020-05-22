@@ -8,10 +8,10 @@
 namespace Inclinometer {
 class ADXL355Inclinometer : public InclinometerDataSource {
   public:
-    ADXL355Inclinometer(int cs, double ewmaAlpha = 0.1,
+    ADXL355Inclinometer(int cs, int cs2, double ewmaAlpha = 0.1,
                         byte filter = ADXL355_FILTER_LPF_4HZ_ODR,
-                        int speed = 5000000)
-        : accel(cs, speed), filter(filter),
+                        int speed = 5000000/*5000000 625000*/)
+        : accel(cs, speed, cs2), filter(filter),
           movingAverageFilter(0.0, ewmaAlpha){};
 
     bool begin() { return accel.begin(ADXL355_RANGE_2G, filter); }

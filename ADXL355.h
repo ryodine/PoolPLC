@@ -44,6 +44,7 @@ typedef struct {
 class ADXL355 {
   private:
     int chipselect;
+    int chipselect2;
     SPISettings settings;
     long axes[3];
     int range;
@@ -51,10 +52,12 @@ class ADXL355 {
     void spi_multibyte_read(byte *buffer, int numBytes, byte startaddress);
     void spi_writebyte(byte address, byte toWrite);
     byte spi_readbyte(byte address);
+    void setCS(bool active);
 
   public:
-    ADXL355(int cs, int speed = 5000000)
-        : chipselect(cs), settings(SPISettings(speed, MSBFIRST, SPI_MODE0)){};
+    ADXL355(int cs, int speed = 5000000, int cs2 = -1)
+        : chipselect(cs), chipselect2(cs2),
+          settings(SPISettings(speed, MSBFIRST, SPI_MODE0)){};
     boolean begin(byte range, byte filter = ADXL355_FILTER_OFF);
     void takeSample();
     byte getStatus();

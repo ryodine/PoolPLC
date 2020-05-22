@@ -3,12 +3,12 @@
 void ADXL355::spi_writebyte(byte address, byte toWrite)
 {
     SPI.beginTransaction(settings);
-    digitalWrite(chipselect, LOW);
+    setCS(true);
 
     SPI.transfer((address << 1) | AXL355__SPI_WRITEBIT);
     SPI.transfer(toWrite);
 
-    digitalWrite(chipselect, HIGH);
+    setCS(false);
     SPI.endTransaction();
 }
 
@@ -16,12 +16,12 @@ byte ADXL355::spi_readbyte(byte address)
 {
     byte result = 0x0;
     SPI.beginTransaction(settings);
-    digitalWrite(chipselect, LOW);
+    setCS(true);
 
     SPI.transfer((address << 1) | AXL355__SPI_READBIT);
     result = SPI.transfer(0x00);
 
-    digitalWrite(chipselect, HIGH);
+    setCS(false);
     SPI.endTransaction();
     return result;
 }
@@ -29,14 +29,14 @@ byte ADXL355::spi_readbyte(byte address)
 void ADXL355::spi_multibyte_read(byte *buf, int buffersize, byte startaddress)
 {
     SPI.beginTransaction(settings);
-    digitalWrite(chipselect, LOW);
+    setCS(true);
 
     SPI.transfer((byte)((startaddress << 1) | AXL355__SPI_READBIT));
     for (int i = 0; i < buffersize; i++) {
         buf[i] = SPI.transfer(0x0);
     }
 
-    digitalWrite(chipselect, HIGH);
+    setCS(false);
     SPI.endTransaction();
 }
 
@@ -44,6 +44,9 @@ boolean ADXL355::begin(byte range, byte filter = ADXL355_FILTER_OFF)
 {
     this->range = range;
     pinMode(chipselect, OUTPUT);
+    if (chipselect2 >= 0) {
+        pinMode(chipselect2, OUTPUT);
+    }
     digitalWrite(chipselect, LOW);
 
     spi_writebyte(ADXL355__REG_RESET, 0x00);
@@ -90,3 +93,11 @@ ADXL355Measurement ADXL355::getSample()
 }
 
 byte ADXL355::getStatus() { return spi_readbyte(ADXL255__REG_STATUS); }
+
+void ADXL355::setCS(bool active)
+{
+    digitalWrite(chipselect, !active);
+    if (chipselect2 >= 0) {
+        digitalWrite(chipselect2, !active);
+    }
+}

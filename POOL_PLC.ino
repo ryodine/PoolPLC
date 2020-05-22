@@ -3,6 +3,7 @@
 #include "HighestCornerAlgorithm.h"
 #include "InclinometerModel.h"
 #include "InclinometerModule.h"
+#include "PersistentStorage.h"
 
 #include <stlport.h>
 
@@ -15,8 +16,7 @@
 #include <Eigen/Geometry>
 #include <SPI.h>
 
-
-#define STATUS_FLASH_PIN CONTROLLINO_D0
+#define STATUS_FLASH_PIN CONTROLLINO_D7
 #define ZERO_BUTTON      CONTROLLINO_A0
 #define RAISE_BUTTON     CONTROLLINO_A1
 #define LOWER_BUTTON     CONTROLLINO_A2
@@ -27,10 +27,13 @@
 #define OUT_BR CONTROLLINO_D19
 
 Fault::Handler *faultHandler;
-Inclinometer::ADXL355Inclinometer accel1(CONTROLLINO_D4);
-Inclinometer::ADXL355Inclinometer accel2(CONTROLLINO_D2);
+PersistentStorage::Manager storageManager;
+
+Inclinometer::ADXL355Inclinometer accel1(CONTROLLINO_D4, CONTROLLINO_D0);
+Inclinometer::ADXL355Inclinometer accel2(CONTROLLINO_D2, CONTROLLINO_D0);
 Inclinometer::Module inclinometer1(&accel1, 0.0);
 Inclinometer::Module inclinometer2(&accel2, 0.0);
+
 HighestCornerAlgo cornerAlgo(2.5 / 180.0 * PI, 5.0 / 180.0 * PI);
 
 // Accelerometer implausibility check constants and counters
@@ -61,6 +64,12 @@ void setup()
     if (!inclinometer2.begin()) {
         faultHandler->setFaultCode(Fault::ACCEL_INIT2);
     }
+    if (!storageManager.begin()) {
+        faultHandler->setFaultCode(Fault::FRAM_INIT);
+    }
+    storageManager.readMap();
+    inclinometer1.importZero(storageManager.getMap()->zeroFrame1);
+    inclinometer2.importZero(storageManager.getMap()->zeroFrame2);
 
     delay(200);
 }
@@ -131,8 +140,9 @@ void loop()
     // Check if the user wanted to zero the accelerometers
     if (!digitalRead(ZERO_BUTTON) && !(raising || lowering)) {
         if (inclinometer1.hasData() && inclinometer2.hasData()) {
-            inclinometer1.zero();
-            inclinometer2.zero();
+            storageManager.getMap()->zeroFrame1 = inclinometer1.zero();
+            storageManager.getMap()->zeroFrame2 = inclinometer2.zero();
+            storageManager.writeMap();
             faultHandler->unlatchFaultCode(Fault::ACCEL_NOT_READY);
             digitalWrite(STATUS_FLASH_PIN, LOW);
             delay(100);
