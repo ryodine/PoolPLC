@@ -29,8 +29,8 @@
 Fault::Handler *faultHandler;
 PersistentStorage::Manager storageManager;
 
-Inclinometer::ADXL355Inclinometer accel1(CONTROLLINO_D4, CONTROLLINO_D0);
-Inclinometer::ADXL355Inclinometer accel2(CONTROLLINO_D2, CONTROLLINO_D0);
+//Inclinometer::ADXL355Inclinometer accel1(CONTROLLINO_D4, CONTROLLINO_D0);
+//Inclinometer::ADXL355Inclinometer accel2(CONTROLLINO_D2, CONTROLLINO_D0);
 Inclinometer::Module inclinometer1(&accel1, 0.0);
 Inclinometer::Module inclinometer2(&accel2, 0.0);
 
