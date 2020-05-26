@@ -13,11 +13,11 @@ Eigen::Vector2d Inclinometer::ADXL355Inclinometer::getData()
                         pow(measure.z / 16.0, 2));
     if (scale > 1.0 + gBand || scale < 1.0 - gBand) {
         Fault::Handler::instance()->setFaultCode(
-            Fault::ACCEL_IMPLAUSIBLE_READING);
+            Fault::INCLINOMETER_IMPLAUSIBLE_READING);
     }
     else {
         Fault::Handler::instance()->unlatchFaultCode(
-            Fault::ACCEL_IMPLAUSIBLE_READING);
+            Fault::INCLINOMETER_IMPLAUSIBLE_READING);
     }
 
     // Apply EWMA filtering

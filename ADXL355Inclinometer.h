@@ -14,9 +14,9 @@ class ADXL355Inclinometer : public InclinometerDataSource {
         : accel(cs, speed, cs2), filter(filter),
           movingAverageFilter(0.0, ewmaAlpha){};
 
-    bool begin() { return accel.begin(ADXL355_RANGE_2G, filter); }
-    bool hasData() { return accel.dataReady(); };
-    Eigen::Vector2d getData();
+    bool begin() override { return accel.begin(ADXL355_RANGE_2G, filter); }
+    bool hasData() override { return accel.dataReady(); };
+    Eigen::Vector2d getData() override;
 
   private:
     ADXL355 accel;

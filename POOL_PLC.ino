@@ -1,3 +1,4 @@
+#include "ACEINNAInclinometer.h"
 #include "ADXL355Inclinometer.h"
 #include "FaultHandling.h"
 #include "HighestCornerAlgorithm.h"
@@ -29,17 +30,14 @@
 Fault::Handler *faultHandler;
 PersistentStorage::Manager storageManager;
 
-//Inclinometer::ADXL355Inclinometer accel1(CONTROLLINO_D4, CONTROLLINO_D0);
-//Inclinometer::ADXL355Inclinometer accel2(CONTROLLINO_D2, CONTROLLINO_D0);
-Inclinometer::Module inclinometer1(&accel1, 0.0);
-Inclinometer::Module inclinometer2(&accel2, 0.0);
+Inclinometer::ACEINNAInclinometer aceinna(Serial2);
+Inclinometer::Module inclinometer1(&aceinna, 0.0);
 
 HighestCornerAlgo cornerAlgo(2.5 / 180.0 * PI, 5.0 / 180.0 * PI);
 
-// Accelerometer implausibility check constants and counters
-const int max_accel_retries = 100;
-const double accel_max_gravity_deviation_fraction = 0.5;
-int accelBusyCounter = 0;
+// Inclinometer connection check constants and counters
+const int maximumInclinometerRetries = 100;
+int noInclinometerDataCounter = 0;
 
 void setup()
 {
@@ -58,25 +56,22 @@ void setup()
 
     SPI.begin();
     Serial.begin(9600);
+    Serial.println("Starting up");
     if (!inclinometer1.begin()) {
-        faultHandler->setFaultCode(Fault::ACCEL_INIT);
-    }
-    if (!inclinometer2.begin()) {
-        faultHandler->setFaultCode(Fault::ACCEL_INIT2);
+        faultHandler->setFaultCode(Fault::INCLINOMETER_INIT);
     }
     if (!storageManager.begin()) {
         faultHandler->setFaultCode(Fault::FRAM_INIT);
     }
     storageManager.readMap();
     inclinometer1.importZero(storageManager.getMap()->zeroFrame1);
-    inclinometer2.importZero(storageManager.getMap()->zeroFrame2);
-
+    Serial.println("Initialized");
     delay(200);
 }
 
 void loop()
 {
-
+    
     // Determine if raising or lowering
     bool raising = digitalRead(RAISE_BUTTON);
     bool lowering = digitalRead(LOWER_BUTTON);
@@ -87,26 +82,20 @@ void loop()
     faultHandler->faultFlasherPeriodic(STATUS_FLASH_PIN);
 
     if ((raising || lowering)) {
-        // Check if there is data ready on the accelerometer
-        if (inclinometer1.hasData() && inclinometer2.hasData()) {
+        // Check if there is data ready on the inclinometer
+        if (inclinometer1.hasData()) {
 
-            // If the accelerometer has data ready, then we can safely unlatch &
+            // If the inclinometer has data ready, then we can safely unlatch &
             // reset the no data ready fault
-            faultHandler->unlatchFaultCode(Fault::ACCEL_NOT_READY);
-            accelBusyCounter = 0;
+            faultHandler->unlatchFaultCode(Fault::INCLINOMETER_NOT_READY);
+            noInclinometerDataCounter = 0;
 
             // Calculate the angles from the data using the mathematical model
             Eigen::Vector2d angles = inclinometer1.getData();
             Serial.print(angles[0] * 180.0 / PI);
             Serial.print("\t");
             Serial.print(angles[1] * 180.0 / PI);
-            Serial.print("\t");
-
-            Eigen::Vector2d angles2 = inclinometer2.getData();
-            Serial.print(angles2[0] * 180.0 / PI);
-            Serial.print("\t");
-            Serial.print(angles2[1] * 180.0 / PI);
-            Serial.println();
+            Serial.print("\n");
 
             // Pass the calculated angles into the highest corner finding
             // algorithm
@@ -121,10 +110,10 @@ void loop()
             }
         }
         else {
-            // If there isn't data ready for max_accel_retries tries, then
-            // register an temporary fault.
-            if (accelBusyCounter++ > max_accel_retries) {
-                faultHandler->setFaultCode(Fault::ACCEL_NOT_READY);
+            // If there isn't data ready for noInclinometerDataCounter tries,
+            // then register an temporary fault.
+            if (noInclinometerDataCounter++ > maximumInclinometerRetries) {
+                faultHandler->setFaultCode(Fault::INCLINOMETER_NOT_READY);
             }
         }
     }
@@ -139,11 +128,10 @@ void loop()
 
     // Check if the user wanted to zero the accelerometers
     if (!digitalRead(ZERO_BUTTON) && !(raising || lowering)) {
-        if (inclinometer1.hasData() && inclinometer2.hasData()) {
+        if (inclinometer1.hasData()) {
             storageManager.getMap()->zeroFrame1 = inclinometer1.zero();
-            storageManager.getMap()->zeroFrame2 = inclinometer2.zero();
             storageManager.writeMap();
-            faultHandler->unlatchFaultCode(Fault::ACCEL_NOT_READY);
+            faultHandler->unlatchFaultCode(Fault::INCLINOMETER_NOT_READY);
             digitalWrite(STATUS_FLASH_PIN, LOW);
             delay(100);
             digitalWrite(STATUS_FLASH_PIN, HIGH);
@@ -153,11 +141,11 @@ void loop()
             digitalWrite(STATUS_FLASH_PIN, HIGH);
         }
         else {
-            faultHandler->setFaultCode(Fault::ACCEL_NOT_READY);
+            faultHandler->setFaultCode(Fault::INCLINOMETER_NOT_READY);
         }
         delay(100);
     }
 
     // avoid thrashing the sensor too much
-    delay(10);
+    delay(50);
 }
