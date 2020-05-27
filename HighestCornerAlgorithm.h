@@ -1,3 +1,15 @@
+/**
+ * @file HighestCornerAlgorithm.h
+ * @author Ryan Johnson (ryan@johnsonweb.us)
+ * @brief Calculates the highest corner of the platform based on measured
+ * inclinometer angles.
+ * @version 0.1
+ * @date 2020-05-26
+ *
+ * @copyright Copyright (c) 2020
+ *
+ */
+
 #ifndef HIGHEST_CORNER_ALGO_H
 #define HIGHEST_CORNER_ALGO_H
 
