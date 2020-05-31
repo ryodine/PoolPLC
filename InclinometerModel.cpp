@@ -45,7 +45,18 @@ Vector2d Inclinometer::Model::calculate(Vector2d angleMeasures)
     Matrix3d measuredFrame = convertAnglesToFrame(angleMeasures);
     Vector3d angles = (this->baseFrame * zeroFrame.transpose() * measuredFrame)
                           .eulerAngles(0, 1, 2);
-    return Vector2d(angles[1], angles[0]);
+
+    Vector2d calculated = Vector2d(angles[1], angles[0]);
+
+    rollVelocity.addPoint(calculated[0] - lastAngles[0]);     
+    pitchVelocity.addPoint(calculated[1] - lastAngles[1]);
+    lastAngles = calculated;
+    return calculated;
+}
+
+Vector2d Inclinometer::Model::getAngularAveragedVelocities()
+{
+    return Vector2d(rollVelocity.getAverage(), pitchVelocity.getAverage());
 }
 
 Matrix3d Inclinometer::Model::convertAnglesToFrame(Vector2d angleMeasures)

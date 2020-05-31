@@ -15,6 +15,7 @@
 
 #include "CANSAEJ1939.h"
 #include "InclinometerInterface.h"
+#include "MovingAverage.h"
 
 #include <Arduino.h>
 
@@ -30,9 +31,13 @@ class ACEINNAInclinometer : public InclinometerDataSource {
      *
      * @param canSerialInterface the HardwareSerial interface on the Arduino
      * that is connected to the CAN Bus Serial Module
+     * @param ewmaAlpha the alpha for exponentially weighted moving average
+     * smoothing. By default, no smoothing happens (alpha=1)
      */
-    ACEINNAInclinometer(HardwareSerial &canSerialInterface)
-        : canInterface(canSerialInterface)
+    ACEINNAInclinometer(HardwareSerial &canSerialInterface,
+                        float ewmaAlpha = 1.0)
+        : canInterface(canSerialInterface), hasDataCached(false),
+          roll(0, ewmaAlpha), pitch(0, ewmaAlpha)
     {
     }
 
@@ -42,20 +47,25 @@ class ACEINNAInclinometer : public InclinometerDataSource {
     //! Address to simulate with this controller
     static constexpr byte k_sourceAddress = 0x11;
 
-    /**
-     * @brief PGNs used by this module
-     */
-    enum PGN {
-        // Data Messages / Get Messages
-        PGN_ENABLED_PERIODIC_DATA_TYPES = 61366,
-        PGN_SSI2DATA = 61481,
+    //! Allowed angle range before considering the inclinometer data to be
+    //! invalid (degrees)
+    static constexpr double k_anglePlausibilityRange = 5;
 
-        // Command Messages
-        PGN_ODR = 65365,
-        PGN_PERIODIC_DATA_TYPES,
-        PGN_LOW_PASS,
-        PGN_ORIENTATION
-    };
+        /**
+         * @brief PGNs used by this module
+         */
+        enum PGN {
+            // Data Messages / Get Messages
+            PGN_ENABLED_PERIODIC_DATA_TYPES = 61366,
+            PGN_SSI2DATA = 61481,
+
+            // Command Messages
+            PGN_SAVE_EEPROM = 65361,
+            PGN_ODR = 65365,
+            PGN_PERIODIC_DATA_TYPES,
+            PGN_LOW_PASS,
+            PGN_ORIENTATION
+        };
 
     //! See the InclinometerDataSource interface
 
@@ -65,6 +75,12 @@ class ACEINNAInclinometer : public InclinometerDataSource {
 
   private:
     CAN::J1939Interface canInterface;
+
+    MovingAverage roll;
+    MovingAverage pitch;
+
+    Eigen::Vector2d cachedAngles;
+    bool hasDataCached;
 };
 }; // namespace Inclinometer
 

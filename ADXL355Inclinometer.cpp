@@ -15,10 +15,6 @@ Eigen::Vector2d Inclinometer::ADXL355Inclinometer::getData()
         Fault::Handler::instance()->setFaultCode(
             Fault::INCLINOMETER_IMPLAUSIBLE_READING);
     }
-    else {
-        Fault::Handler::instance()->unlatchFaultCode(
-            Fault::INCLINOMETER_IMPLAUSIBLE_READING);
-    }
 
     // Apply EWMA filtering
     movingAverageFilter.addData(measure);

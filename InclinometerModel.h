@@ -12,6 +12,8 @@
 #ifndef INCLINOMETER_MODEL_H
 #define INCLINOMETER_MODEL_H
 
+#include "MovingAverage.h"
+
 #include <stlport.h>
 
 #include <Eigen30.h>
@@ -60,7 +62,8 @@ class Model {
                     AngleAxisd(0, Vector3d::UnitZ())),
           zeroFrame(AngleAxisd(0, Vector3d::UnitX()) *
                     AngleAxisd(0, Vector3d::UnitY()) *
-                    AngleAxisd(0, Vector3d::UnitZ())){};
+                    AngleAxisd(0, Vector3d::UnitZ())),
+          rollVelocity(0, 0.1), pitchVelocity(0, 0.1){};
 
     /**
      * @brief Imports a ModelZeropoint and updates the model
@@ -88,15 +91,28 @@ class Model {
 
     /**
      * @brief Apply zero and base frame to get new coordinates.
-     * 
+     *
      * @param angleMeasures input (measured) angles (roll, pitch)
      * @return Vector2d output (calculated) angles (roll, pitch)
      */
     Vector2d calculate(Vector2d angleMeasures);
 
+    /**
+     * @brief Returns the cumulative exponentially-weighted moving average of
+     * the displacements of previous calculations
+     *
+     * @return Vector2d roll, pitch
+     */
+    Vector2d getAngularAveragedVelocities();
+
   private:
     Matrix3d baseFrame;
     Matrix3d zeroFrame;
+
+    Vector2d lastAngles;
+
+    ::MovingAverage pitchVelocity;
+    ::MovingAverage rollVelocity;
 
     Matrix3d convertAnglesToFrame(Vector2d angleMeasures);
 };

@@ -105,6 +105,9 @@ struct J1939Message {
      * @brief Construct a new J1939Message object representing a command message
      * with one byte of data in the payload
      *
+     * The first byte of this message is actually the desination address. The
+     * following byte is data 1
+     *
      * @param source source CAN address of the message
      * @param dest destination CAN address of the message
      * @param PGN parameter group number of the message
@@ -122,6 +125,9 @@ struct J1939Message {
      * @brief Construct a new J1939Message object representing a command message
      * with two bytes of data in the payload
      *
+     * NOTE: The first byte of this message is actually the desination address.
+     * The following byte is data 1
+     *
      * @param source source CAN address of the message
      * @param dest destination CAN address of the message
      * @param PGN parameter group number of the message
@@ -136,6 +142,29 @@ struct J1939Message {
         data[0] = dest;
         data[1] = data1;
         data[2] = data2;
+        CanID = J1939ID(6, source, PGN);
+    }
+
+    /**
+     * @brief Construct a new J1939Message object representing a command message
+     * with three bytes of data in the payload
+     *
+     * @param source source CAN address of the message
+     * @param dest destination CAN address of the message
+     * @param PGN parameter group number of the message
+     * @param data1 the first byte of data (leftmost byte) to send, filling the
+     * rest of the bytes with zeros
+     * @param data2 the second byte of data (second-to-leftmost byte) to send,
+     * filling the rest of the bytes with zeros
+     * @param data3 the second byte of data (third-to-leftmost byte) to send,
+     * filling the rest of the bytes with zeros
+     */
+    J1939Message(byte source, byte dest, unsigned long PGN, byte data1,
+                 byte data2, byte data3)
+    {
+        data[0] = data1;
+        data[1] = data2;
+        data[2] = data3;
         CanID = J1939ID(6, source, PGN);
     }
 

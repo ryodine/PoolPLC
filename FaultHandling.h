@@ -32,6 +32,23 @@ enum Type {
 };
 
 /**
+ * @brief List of system events that can unlatch one or more recoverable faults
+ */
+enum FaultUnlatchEvent {
+    INCLINOMETER_DATA_RECEIVE = 0,
+    MOVEMENT_COMMAND_END,
+    FAULT_UNLATCH_EVENT_SIZE
+};
+
+// clang-format off
+constexpr bool k_faultUnlatchMapping[FAULT_UNLATCH_EVENT_SIZE][RETRYABLE_END_SENTINEL - FATAL_END_SENTINEL] = {
+//  INCL_NR  IMPLAUS  PARITY
+    {true,    false,   false}, // INCLINOMETER_DATA_RECEIVE
+    {false,   true,    false} // MOVEMENT_COMMAND_END
+};
+// clang-format on
+
+/**
  * @brief Fault handler singleton
  */
 class Handler {
@@ -59,7 +76,8 @@ class Handler {
     bool hasMinorFault() { return hasFaultOfType(FATAL_END_SENTINEL, ALL_OK); };
 
     /**
-     * @brief Checks if there is at least one major (non-recoverable) fault latched
+     * @brief Checks if there is at least one major (non-recoverable) fault
+     * latched
      *
      * @return true if there is at least one major fault
      * @return false if there aren't any major faults
@@ -76,22 +94,29 @@ class Handler {
 
     /**
      * @brief periodic function that writes fault flash codes to an indicator.
-     * 
+     *
      * Note - will only flash the first fault found.
-     * 
+     *
      * 2 short flashes plus n long flashes for recoverable faults
      * 5 short flashes plus n long flashes for non-recoverable faults
-     * 
+     *
      * @param LEDPIN pin to digital write error code patterns to
      */
     void faultFlasherPeriodic(const int LEDPIN);
 
     /**
-     * @brief unlatch a fault condition
-     * 
+     * @brief unlatch a fault condition directly
+     *
      * @param fault the fault condition to unlatch
      */
     void unlatchFaultCode(Type fault);
+
+    /**
+     * @brief Unlatches all faults that are mapped to this fault unlatch event.
+     *
+     * @param event the event that was triggered
+     */
+    void onFaultUnlatchEvent(FaultUnlatchEvent event);
 
   private:
     bool faults[ALL_OK];

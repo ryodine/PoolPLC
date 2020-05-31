@@ -31,41 +31,11 @@ void CAN::RawInterface::resetBaudTo(CAN::SerialBaudrate s)
         sprintf(atCommand, "AT+S=%d", (unsigned int)s);
         atCommand[6] = '\0';
         serialInterface.println(atCommand);
-        delay(100);
-        Serial.println("did one");
+        delay(50);
         flushBuffer();
     }
     serialInterface.begin(serialBaudToBaud(s));
     serialInterface.print("+++");
-    /*char atCommand[7];
-    sprintf(atCommand, "AT+S=%d", (unsigned int)s);
-    atCommand[6] = '\0';
-    serialInterface.begin(9600);
-    serialInterface.print("+++");
-    serialInterface.println(atCommand);
-    delay(100);
-    serialInterface.begin(19200);
-    serialInterface.print("+++");
-    serialInterface.println(atCommand);
-    delay(100);
-
-    serialInterface.begin(38400);
-    serialInterface.print("+++");
-    serialInterface.println(atCommand);
-    delay(100);
-
-    serialInterface.begin(57600);
-    serialInterface.print("+++");
-    serialInterface.println(atCommand);
-    delay(100);
-
-    serialInterface.begin(115200);
-    serialInterface.print("+++");
-    serialInterface.println(atCommand);
-    delay(100);
-
-    serialInterface.begin(serialBaudToBaud(s));
-    serialInterface.print("+++");*/
     flushBuffer();
 }
 

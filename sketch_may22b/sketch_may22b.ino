@@ -81,7 +81,7 @@ void setup() {
   saeJ1939SetCommandLen1(0x11,0x80,65366,1); // ONLY SSI2
   saeJ1939SetCommandLen2(0x11,0x80,65367,2,2); // LPF
   
-  //saeJ1939Request(0xFF,0x80,65242);
+  
   byte buf[8] = {0x80, 50, 0, 0, 0, 0, 0, 0};
   //send(0x18FF5511, 1, 0, 8, buf);
 
@@ -93,7 +93,7 @@ long period = 50;
 long last = 1000;
 void loop() {
   /*if (millis() - last > period) {
-    saeJ1939Request(0xFF,0x80,65242);
+    //saeJ1939Request(0x11,0x80,65242);
     last = millis();
   }*/
   // put your main code here, to run repeatedly:
@@ -116,28 +116,27 @@ void loop() {
         id <<= 8;
         id += buf[i];
     }
-    if (millis() - last > period) {
-      if ((id & (long)0xFFFF00) >> 8 == 61481) {
-        unsigned long pitch = ((unsigned long)data[2]) << 16 | ((unsigned long)data[1]) << 8 | ((unsigned long)data[0]);
-        unsigned long roll = ((unsigned long)data[5]) << 16 | ((unsigned long)data[4]) << 8 | ((unsigned long)data[3]);
+    if ((id & (long)0xFFFF00) >> 8 == 61481) {
+      unsigned long pitch = ((unsigned long)data[2]) << 16 | ((unsigned long)data[1]) << 8 | ((unsigned long)data[0]);
+      unsigned long roll = ((unsigned long)data[5]) << 16 | ((unsigned long)data[4]) << 8 | ((unsigned long)data[3]);
 
-        double pitch_adjusted = (pitch * (1.0/32768) - 250.0);
-        double roll_adjusted = (roll * (1.0/32768) - 250.0);
+      double pitch_adjusted = (pitch * (1.0/32768) - 250.0);
+      double roll_adjusted = (roll * (1.0/32768) - 250.0);
 
-        Serial.print(pitch_adjusted);
-        Serial.print("\t");
-        Serial.println(roll_adjusted);
-      
-      } else {
-        Serial.print("UNKNOWN PACKET PGN: 0x");
-        Serial.println(id, HEX);
-        for (int i = 0; i < 8; i++) {
-          Serial.print(data[i], HEX);
-          Serial.print(", ");
-        }
-        Serial.println();
+      Serial.print(pitch_adjusted);
+      Serial.print("\t");
+      Serial.println(roll_adjusted);
+    
+    } else {
+      Serial.print("UNKNOWN PACKET PGN: 0x");
+      Serial.println(id, HEX);
+      for (int i = 0; i < 8; i++) {
+        Serial.print(data[i], HEX);
+        Serial.print(", ");
       }
-      last = millis();
+      Serial.println();
+      
+      while (Serial2.available()) Serial2.read();
     }
   }
 }
@@ -155,7 +154,7 @@ bool j1939PeerToPeer(unsigned long lPGN)
 unsigned long saeJ1939Request(byte nSrcAddr, byte nDestAddr, unsigned long lPGN)
 {
   unsigned char pgnPayload[8] = {lPGN & 0xFF, (lPGN >> 8) & 0xFF, (lPGN >> 16) & 0xFF, 0, 0, 0, 0, 0};
-  return saeJ1939SEND(PGN_RequestMessage, 6, nSrcAddr, nDestAddr, 0, pgnPayload, 8);  // Transmit the message
+  return saeJ1939SEND(PGN_RequestMessage | nDestAddr, 6, nSrcAddr, nDestAddr, 0, pgnPayload, 3);  // Transmit the message
 }
 
 unsigned long saeJ1939SetCommandLen1(byte nSrcAddr, byte nDestAddr, unsigned long lPGN, byte value)

@@ -14,6 +14,7 @@
 #define INCLINOMETER_MODULE_H
 
 #include "InclinometerInterface.h"
+#include "InclinometerModel.h"
 
 namespace Inclinometer {
 
@@ -73,6 +74,13 @@ class Module {
      * @param zero the zero frame to zero the sensor to
      */
     void importZero(ModelZeropoint zero) { return model.importZero(zero); };
+
+    /**
+     * @brief Get the model contained in the module
+     * 
+     * @return Model
+     */
+    Model& getModel() { return model; };
 
   private:
     InclinometerDataSource *sensor;

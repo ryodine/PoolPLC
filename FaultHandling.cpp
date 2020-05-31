@@ -32,6 +32,16 @@ void Fault::Handler::unlatchFaultCode(Type fault)
     this->faults[fault] = false;
 }
 
+void Fault::Handler::onFaultUnlatchEvent(FaultUnlatchEvent event)
+{
+    bool* evtTriggers = k_faultUnlatchMapping[event];
+    for (int i = 0; i < RETRYABLE_END_SENTINEL - FATAL_END_SENTINEL; ++i) {
+        if (evtTriggers[i]) {
+            unlatchFaultCode(FATAL_END_SENTINEL + 1 + i);
+        }
+    }
+}
+
 bool Fault::Handler::hasFault(Type fault) { return this->faults[fault]; }
 
 bool Fault::Handler::hasFaultOfType(Type start, Type end)
