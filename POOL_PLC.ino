@@ -1,9 +1,21 @@
+/**
+ * @file POOL_PLC.ino
+ * @author Ryan Johnson (ryan@johnsonweb.us)
+ * @brief Main program for the Pool PLC
+ * @version 0.1
+ * @date 2020-06-13
+ * 
+ * @copyright Copyright (c) 2020
+ * 
+ */
+
 #include "ACEINNAInclinometer.h"
 #include "FaultHandling.h"
 #include "InclinometerModel.h"
 #include "InclinometerModule.h"
 #include "PersistentStorage.h"
 #include "MotionController.h"
+#include "PinMappings.h"
 
 #include <stlport.h>
 
@@ -16,10 +28,6 @@
 #include <Eigen/Geometry>
 #include <SPI.h>
 
-#define STATUS_FLASH_PIN CONTROLLINO_D7
-#define ZERO_BUTTON      CONTROLLINO_A0
-#define RAISE_BUTTON     CONTROLLINO_A1
-#define LOWER_BUTTON     CONTROLLINO_A2
 
 Fault::Handler *faultHandler;
 PersistentStorage::Manager storageManager;
@@ -36,11 +44,12 @@ void setup()
 {
     faultHandler = Fault::Handler::instance();
     // put your setup code here, to run once:
-    pinMode(STATUS_FLASH_PIN, OUTPUT);
+    pinMode(STATUS_PIN, OUTPUT);
+    pinMode(FAULT_PIN, OUTPUT);
     pinMode(ZERO_BUTTON, INPUT);
     pinMode(RAISE_BUTTON, INPUT);
     pinMode(LOWER_BUTTON, INPUT);
-    digitalWrite(STATUS_FLASH_PIN, HIGH);
+    digitalWrite(STATUS_PIN, LOW);
 
     SPI.begin();
     Serial.begin(9600);
@@ -48,12 +57,15 @@ void setup()
     if (!inclinometer1.begin()) {
         faultHandler->setFaultCode(Fault::INCLINOMETER_INIT);
     }
+    Serial.println("Inclinometer began");
     if (!storageManager.begin()) {
         faultHandler->setFaultCode(Fault::FRAM_INIT);
     }
+    Serial.println("Storage began");
     storageManager.readMap();
     inclinometer1.importZero(storageManager.getMap()->zeroFrame1);
     motionController.Initialize();
+    motionController.Step(); // Step the motion controller once to show any active faults
     Serial.println("Initialized");
 }
 
@@ -63,6 +75,7 @@ void setup()
  */
 void loop()
 {
+
     // Determine if raising or lowering
     bool wasRaising = raising;
     bool wasLowering = lowering;
@@ -83,25 +96,45 @@ void loop()
         motionController.RequestOff();
     }
 
-    // This just runs the periodic error flasher code
-    faultHandler->faultFlasherPeriodic(STATUS_FLASH_PIN);
-
     // Step the motion controller
     motionController.Step();
+    status_flash(motionController.GetState());
+    digitalWrite(FAULT_PIN, Fault::Handler::instance()->hasFault());
 
     // Check if the user wanted to zero the accelerometers
     if (!digitalRead(ZERO_BUTTON) && !(raising || lowering)) {
         storageManager.getMap()->zeroFrame1 = inclinometer1.zero();
         storageManager.writeMap();
-        digitalWrite(STATUS_FLASH_PIN, LOW);
-        delay(100);
-        digitalWrite(STATUS_FLASH_PIN, HIGH);
-        delay(100);
-        digitalWrite(STATUS_FLASH_PIN, LOW);
-        delay(100);
-        digitalWrite(STATUS_FLASH_PIN, HIGH);
-        delay(100);
+        motionController.PopMessage("RESET LEVEL SENSOR");
+        delay(500);
     }
     // avoid thrashing the sensor too much
     delay(10);
+}
+
+bool flash = false;
+unsigned long last_pulse_at = 0;
+void status_flash(Motion::MotionStateMachine::STATE state)
+{
+    switch (state) {
+        case Motion::MotionStateMachine::STATE_MOVING:
+            digitalWrite(STATUS_PIN, HIGH);
+            break;
+        case Motion::MotionStateMachine::STATE_MOVEMENT_REQUESTED:
+            if (millis() - last_pulse_at > 500) {
+                flash = !flash;
+                last_pulse_at = millis();
+                digitalWrite(STATUS_PIN, flash);
+            }
+            break;
+        case Motion::MotionStateMachine::STATE_FAULTED:
+            if (millis() - last_pulse_at > 50) {
+                flash = !flash;
+                last_pulse_at = millis();
+                digitalWrite(STATUS_PIN, flash);
+            }
+            break;
+        default:
+            digitalWrite(STATUS_PIN, LOW);
+    }
 }

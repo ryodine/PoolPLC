@@ -12,23 +12,58 @@
 #ifndef POOL_FAULT_HANDLING_H
 #define POOL_FAULT_HANDLING_H
 
+#ifndef ENUM_TO_STRING
+#define __ENUM_TO_STRING__(x) #x
+#define ENUM_TO_STRING(x) __ENUM_TO_STRING__(x)
+#endif
+
 namespace Fault {
 
 /**
  * @brief List of system faults
  */
 enum Type {
+  // 20 char limit:     //
+  //--------------------//
     ZERO,
     INCLINOMETER_INIT,
     INCLINOMETER_INIT2,
     FRAM_INIT,
     FATAL_END_SENTINEL,
 
-    INCLINOMETER_NOT_READY,
-    INCLINOMETER_IMPLAUSIBLE_READING,
+    INCLINOMETER_UNREADY,
+    INCL_IMPLAUS_READ,
     ACCEL_PARITY_FAILURE,
     RETRYABLE_END_SENTINEL,
     ALL_OK
+};
+
+const char ecodeName[ALL_OK+1][21] = {
+    ENUM_TO_STRING(ZERO),
+    ENUM_TO_STRING(INCLINOMETER_INIT),
+    ENUM_TO_STRING(INCLINOMETER_INIT2),
+    ENUM_TO_STRING(FRAM_INIT),
+    ENUM_TO_STRING(FATAL_END_SENTINEL),
+    ENUM_TO_STRING(INCLINOMETER_UNREADY),
+    ENUM_TO_STRING(INCL_IMPLAUS_READ),
+    ENUM_TO_STRING(ACCEL_PARITY_FAILURE),
+    ENUM_TO_STRING(RETRYABLE_END_SENTINEL),
+    ENUM_TO_STRING(ALL_OK)
+};
+
+constexpr char ecodeHelpText[ALL_OK+1][21] = {
+//   20 char limit:     //
+//"--------------------"//
+  "",
+  "Incl. 1 start failed",
+  "Incl. 2 start failed",
+  "Memory module failed",
+  "",
+  "Sensor timed out    ",
+  "Sensor bad reading  ",
+  "Sensor disagreement ",
+  "",
+  "NO SYSTEM ERRORS"
 };
 
 /**
@@ -93,16 +128,10 @@ class Handler {
     bool hasFault() { return hasFaultOfType(ZERO, ALL_OK); };
 
     /**
-     * @brief periodic function that writes fault flash codes to an indicator.
-     *
-     * Note - will only flash the first fault found.
-     *
-     * 2 short flashes plus n long flashes for recoverable faults
-     * 5 short flashes plus n long flashes for non-recoverable faults
-     *
-     * @param LEDPIN pin to digital write error code patterns to
+     * @brief Serial logs the current faults
+     * 
      */
-    void faultFlasherPeriodic(const int LEDPIN);
+    void printFaultReport();
 
     /**
      * @brief unlatch a fault condition directly
@@ -118,6 +147,14 @@ class Handler {
      */
     void onFaultUnlatchEvent(FaultUnlatchEvent event);
 
+    /**
+     * @brief Finds the next fault, starting at start
+     * 
+     * @param start starting fault
+     * @return int next fault, or -1 if none
+     */
+    int nextFault(Type start);
+
   private:
     bool faults[ALL_OK];
     static Handler *inst;
@@ -127,8 +164,6 @@ class Handler {
     bool hasFault(Type fault);
     bool hasFaultOfType(Type start, Type end);
     int numFaults();
-    int nextFault(Type start);
-    void printFaultReport();
     Handler();
 };
 }; // namespace Fault

@@ -13,9 +13,18 @@
 #ifndef MOVING_STATE_MACHINE_GUARD_H
 #define MOVING_STATE_MACHINE_GUARD_H
 
+#ifndef ENUM_TO_STRING
+#define __ENUM_TO_STRING__(x) #x
+#define ENUM_TO_STRING(x) __ENUM_TO_STRING__(x)
+#endif
+
 namespace Motion {
 
+enum MovementDirection { RAISE, LOWER, NONE };
+
 class MotionController;
+constexpr char* k_motionStateNames[] = {"READY", "STOPPED", "STEADYING", "MOVING", "FAULTED"};
+
 
 class MotionStateMachine {
   public:
@@ -23,13 +32,19 @@ class MotionStateMachine {
         STATE_NONE,
         STATE_NOT_RUNNING,
         STATE_MOVEMENT_REQUESTED,
-        STATE_MOVING
+        STATE_MOVING,
+        STATE_FAULTED
     };
 
     MotionStateMachine(MotionController *controller);
 
+    //! Steps the state machine
     void Step();
+
+    //! Perform a transition from current state to "state" on next step
     void RequestState(STATE state) { m_requestedState = state; };
+
+    //! Gets the current state
     STATE GetState() { return m_currentState; };
 
   private:
@@ -44,6 +59,10 @@ class MotionStateMachine {
     void OnStateMovingEnter();
     STATE OnStateMovingStep();
     void OnStateMovingExit();
+
+    void OnStateFaultedEnter();
+    STATE OnStateFaultedStep();
+    void OnStateFaultedExit();
 
     MotionController *m_controller;
     STATE m_currentState;

@@ -51,27 +51,29 @@ class ACEINNAInclinometer : public InclinometerDataSource {
     //! invalid (degrees)
     static constexpr double k_anglePlausibilityRange = 5;
 
-        /**
-         * @brief PGNs used by this module
-         */
-        enum PGN {
-            // Data Messages / Get Messages
-            PGN_ENABLED_PERIODIC_DATA_TYPES = 61366,
-            PGN_SSI2DATA = 61481,
+    /**
+     * @brief PGNs used by this module
+     */
+    enum PGN {
+        // Data Messages / Get Messages
+        PGN_ENABLED_PERIODIC_DATA_TYPES = 61366,
+        PGN_SSI2DATA = 61481,
 
-            // Command Messages
-            PGN_SAVE_EEPROM = 65361,
-            PGN_ODR = 65365,
-            PGN_PERIODIC_DATA_TYPES,
-            PGN_LOW_PASS,
-            PGN_ORIENTATION
-        };
+        // Command Messages
+        PGN_SAVE_EEPROM = 65361,
+        PGN_ODR = 65365,
+        PGN_PERIODIC_DATA_TYPES,
+        PGN_LOW_PASS,
+        PGN_ORIENTATION
+    };
 
     //! See the InclinometerDataSource interface
 
     bool begin() override;
     bool hasData() override;
     Eigen::Vector2d getData() override;
+
+    void ProvisionACEINNAInclinometer();
 
   private:
     CAN::J1939Interface canInterface;

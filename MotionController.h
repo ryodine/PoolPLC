@@ -16,6 +16,8 @@
 #include "HighestCornerAlgorithm.h"
 #include "InclinometerModule.h"
 #include "MotionStateMachine.h"
+#include "PinMappings.h"
+#include "DisplayControl.h"
 
 #include <stlport.h>
 
@@ -25,17 +27,9 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-
-#define OUT_TR CONTROLLINO_D16
-#define OUT_TL CONTROLLINO_D17
-#define OUT_BL CONTROLLINO_D18
-#define OUT_BR CONTROLLINO_D19
-
-#define OUT_ENABLE CONTROLLINO_D23
-
 namespace Motion {
 
-enum MovementDirection { RAISE, LOWER, NONE };
+constexpr int k_dispUpdatePeriodMillis = 1000;
 
 class MotionController {
   public:
@@ -49,10 +43,19 @@ class MotionController {
      */
     bool Initialize();
 
+    /**
+     * @brief Requests that the controller transition to raising mode
+     */
     void RequestRaise();
 
+    /**
+     * @brief Requests that the controller transition to lowering mode
+     */
     void RequestLower();
 
+    /**
+     * @brief Requests that the controller halts motion
+     */
     void RequestOff();
 
     Eigen::Vector2d GetLastMeasures() { return m_lastSensorMeasures; };
@@ -62,9 +65,25 @@ class MotionController {
      */
     void Step();
 
+    /**
+     * @brief Get the State of the state machine
+     * 
+     * @return MotionStateMachine::STATE current state of the state machine
+     */
+    MotionStateMachine::STATE GetState() { return m_stateMachine.GetState(); }
+
+    /**
+     * @brief Shows a brief message on screen, will disappear on next update of motion controller
+     * 
+     * @param line2 text to show on line 2
+     */
+    void PopMessage(char* line2);
+
   private:
     Inclinometer::Module &m_sensor;
     MotionStateMachine m_stateMachine;
+    Display::Controller m_displayController;
+    unsigned long m_lastDispUpdate;
 
     HighestCornerAlgo m_cornerAlgo;
 
@@ -74,12 +93,15 @@ class MotionController {
     unsigned long m_lastSensorReadingUnstable;
     Eigen::Vector2d m_lastSensorMeasures;
 
-    // Called from state machine:
+    // Callback hooks from state machine:
     void StartMovement();
     void StopMovement();
     void SetCorners(bool corner1, bool corner2, bool corner3, bool corner4);
     void MovementAlgorithmStep();
     bool CheckStabilityStep();
+
+    // Disp update Step
+    void DispUpdate();
 
     // Let the state machine access this class' private functions
     friend class MotionStateMachine;

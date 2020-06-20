@@ -1,11 +1,12 @@
 #include "MotionController.h"
 
+#include "DisplayControl.h"
 #include "FaultHandling.h"
 #include "InclinometerModel.h"
 
 #include <Arduino.h>
 
-Motion::MotionController::MotionController(Inclinometer::Module& sensor)
+Motion::MotionController::MotionController(Inclinometer::Module &sensor)
     : m_sensor(sensor), m_stateMachine(MotionStateMachine(this)),
       m_cornerAlgo(0.05 / 180.0 * PI, 0.1 / 180.0 * PI)
 {
@@ -22,7 +23,8 @@ bool Motion::MotionController::Initialize()
     SetCorners(false, false, false, false);
     digitalWrite(OUT_ENABLE, LOW);
     m_lastSensorReadingTimestamp = millis();
-    return true;
+    m_lastDispUpdate = millis() - k_dispUpdatePeriodMillis;
+    return m_displayController.begin();
 }
 
 void Motion::MotionController::RequestRaise()
@@ -57,9 +59,11 @@ void Motion::MotionController::Step()
         m_lastSensorMeasures = m_sensor.getData();
 
         double senseRollRate =
-            m_sensor.getModel().getAngularAveragedVelocities()[0] * 18000.0 / PI;
+            m_sensor.getModel().getAngularAveragedVelocities()[0] * 18000.0 /
+            PI;
         double sensePitchRate =
-            m_sensor.getModel().getAngularAveragedVelocities()[1] * 18000.0 / PI;
+            m_sensor.getModel().getAngularAveragedVelocities()[1] * 18000.0 /
+            PI;
 
         if (senseRollRate >= 0.1 || sensePitchRate >= 0.1) {
             m_lastSensorReadingUnstable = millis();
@@ -76,26 +80,21 @@ void Motion::MotionController::Step()
     }
 
     if (millis() - m_lastSensorReadingTimestamp > 500) {
-        Fault::Handler::instance()->setFaultCode(Fault::INCLINOMETER_NOT_READY);
+        Fault::Handler::instance()->setFaultCode(Fault::INCLINOMETER_UNREADY);
     }
 
-    // If there is a fault, transition to no movement
-    if (Fault::Handler::instance()->hasFault()) {
-        m_stateMachine.RequestState(MotionStateMachine::STATE_NOT_RUNNING);
-    }
+    DispUpdate();
     m_stateMachine.Step();
 }
 
 void Motion::MotionController::StartMovement()
 {
-    // to-do start movement
     Serial.println("Movement started");
     digitalWrite(OUT_ENABLE, HIGH);
 }
 
 void Motion::MotionController::StopMovement()
 {
-    // to-do stop movement
     Serial.println("Movement halted");
     SetCorners(false, false, false, false);
     digitalWrite(OUT_ENABLE, LOW);
@@ -123,6 +122,38 @@ void Motion::MotionController::MovementAlgorithmStep()
                m_cornerAlgo.getCorner(1, lowering),
                m_cornerAlgo.getCorner(2, lowering),
                m_cornerAlgo.getCorner(3, lowering));
+}
+
+void Motion::MotionController::PopMessage(char* line2) {
+    Display::DisplayableText t;
+    for (int i = 0; i < 4; i++) {
+        strncpy(t.array[i], "                    ", 21);
+    }
+    snprintf(t.line_struct.line2, 21, "%-20s", line2);
+    m_displayController.writeRaw(t);
+}
+
+void Motion::MotionController::DispUpdate() {
+    // Step the display controller
+    if (millis() - m_lastDispUpdate > k_dispUpdatePeriodMillis) {
+        Display::SystemDisplayState dstate;
+        dstate.motionState = GetState();
+        dstate.pitch = m_sensor.getData()[1] * 180.0 / PI;
+        dstate.roll = m_sensor.getData()[0] * 180.0 / PI;
+        dstate.ram1 = m_cornerAlgo.getCorner(0, m_direction == LOWER);
+        dstate.ram2 = m_cornerAlgo.getCorner(1, m_direction == LOWER);
+        dstate.ram3 = m_cornerAlgo.getCorner(2, m_direction == LOWER);
+        dstate.ram4 = m_cornerAlgo.getCorner(3, m_direction == LOWER);
+        dstate.dirn = m_direction;
+        dstate.enable = GetState() == MotionStateMachine::STATE_MOVING;
+        if (Fault::Handler::instance()->hasFault()) {
+            dstate.faultType = Fault::Handler::instance()->nextFault(Fault::ZERO);
+        } else {
+            dstate.faultType = Fault::ALL_OK;
+        }
+        m_displayController.update(dstate);
+        m_lastDispUpdate = millis();
+    }
 }
 
 bool Motion::MotionController::CheckStabilityStep()

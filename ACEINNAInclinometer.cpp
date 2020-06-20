@@ -12,26 +12,8 @@ bool Inclinometer::ACEINNAInclinometer::begin()
                        CAN::CANBusBaudrate::kbps_250);
 
 #ifdef PROVISION_CAN_ACEINNA_MODULE
-    // Set Output data rate to 10Hz (10=10Hz; 20=5Hz)
-    canInterface.write(
-        CAN::J1939Message(k_sourceAddress, k_aceinnaAddress, PGN_ODR, 10),
-        k_aceinnaAddress);
-
-    // Only use SSI2 (Inclination) data
-    canInterface.write(CAN::J1939Message(k_sourceAddress, k_aceinnaAddress,
-                                         PGN_PERIODIC_DATA_TYPES, 1),
-                       k_aceinnaAddress);
-
-    // 2Hz digital low pass filter
-    canInterface.write(CAN::J1939Message(k_sourceAddress, k_aceinnaAddress,
-                                         PGN_LOW_PASS, 2, 2),
-                       k_aceinnaAddress);
-
-    // Save config to EEPROM
-    canInterface.write(CAN::J1939Message(k_sourceAddress, k_aceinnaAddress,
-                                         PGN_SAVE_EEPROM, 0, k_aceinnaAddress,
-                                         1),
-                       k_aceinnaAddress);
+    // define PROVISION_CAN_ACEINNA_MODULE to make the aceinna module be set up once
+    ProvisionACEINNAInclinometer();
 #endif
 
     canInterface.flushBuffer();
@@ -69,7 +51,10 @@ bool Inclinometer::ACEINNAInclinometer::hasData()
                 roll_adjusted > k_anglePlausibilityRange ||
                 roll_adjusted < -k_anglePlausibilityRange) {
                 Fault::Handler::instance()->setFaultCode(
-                    Fault::INCLINOMETER_IMPLAUSIBLE_READING);
+                    Fault::INCL_IMPLAUS_READ);
+            } else {
+                Fault::Handler::instance()->unlatchFaultCode(
+                    Fault::INCL_IMPLAUS_READ);
             }
 
             cachedAngles = Eigen::Vector2d(pitch_adjusted * PI / 180.0,
@@ -86,4 +71,28 @@ Eigen::Vector2d Inclinometer::ACEINNAInclinometer::getData()
     roll.addPoint(cachedAngles[0]);
     pitch.addPoint(cachedAngles[1]);
     return Eigen::Vector2d(roll.getAverage(), pitch.getAverage());
+}
+
+void Inclinometer::ACEINNAInclinometer::ProvisionACEINNAInclinometer()
+{
+    // Set Output data rate to 10Hz (10=10Hz; 20=5Hz)
+    canInterface.write(
+        CAN::J1939Message(k_sourceAddress, k_aceinnaAddress, PGN_ODR, 10),
+        k_aceinnaAddress);
+
+    // Only use SSI2 (Inclination) data
+    canInterface.write(CAN::J1939Message(k_sourceAddress, k_aceinnaAddress,
+                                         PGN_PERIODIC_DATA_TYPES, 1),
+                       k_aceinnaAddress);
+
+    // 2Hz digital low pass filter
+    canInterface.write(CAN::J1939Message(k_sourceAddress, k_aceinnaAddress,
+                                         PGN_LOW_PASS, 2, 2),
+                       k_aceinnaAddress);
+
+    // Save config to EEPROM
+    canInterface.write(CAN::J1939Message(k_sourceAddress, k_aceinnaAddress,
+                                         PGN_SAVE_EEPROM, 0, k_aceinnaAddress,
+                                         1),
+                       k_aceinnaAddress);
 }
