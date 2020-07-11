@@ -96,7 +96,7 @@ class MotionController {
     // Callback hooks from state machine:
     void StartMovement();
     void StopMovement();
-    void SetCorners(bool corner1, bool corner2, bool corner3, bool corner4);
+    void SetCorners(bool corner1, bool corner2, bool corner3, bool corner4, bool raising);
     void MovementAlgorithmStep();
     bool CheckStabilityStep();
 

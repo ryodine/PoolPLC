@@ -14,14 +14,25 @@ Motion::MotionController::MotionController(Inclinometer::Module &sensor)
 
 bool Motion::MotionController::Initialize()
 {
-    pinMode(OUT_TR, OUTPUT);
-    pinMode(OUT_BR, OUTPUT);
-    pinMode(OUT_TL, OUTPUT);
-    pinMode(OUT_BL, OUTPUT);
+    pinMode(OUT_TR_RSE, OUTPUT);
+    pinMode(OUT_BR_RSE, OUTPUT);
+    pinMode(OUT_TL_RSE, OUTPUT);
+    pinMode(OUT_BL_RSE, OUTPUT);
+
+    pinMode(OUT_TR_LWR, OUTPUT);
+    pinMode(OUT_BR_LWR, OUTPUT);
+    pinMode(OUT_TL_LWR, OUTPUT);
+    pinMode(OUT_BL_LWR, OUTPUT);
+
     pinMode(OUT_ENABLE, OUTPUT);
 
-    SetCorners(false, false, false, false);
+    // clears all ram disable pins
+    SetCorners(false, false, false, false, false);
+    SetCorners(false, false, false, false, true);
+
+    // disable the output
     digitalWrite(OUT_ENABLE, LOW);
+
     m_lastSensorReadingTimestamp = millis();
     m_lastDispUpdate = millis() - k_dispUpdatePeriodMillis;
     return m_displayController.begin();
@@ -96,20 +107,27 @@ void Motion::MotionController::StartMovement()
 void Motion::MotionController::StopMovement()
 {
     Serial.println("Movement halted");
-    SetCorners(false, false, false, false);
+    SetCorners(false, false, false, false, m_direction == RAISE);
     digitalWrite(OUT_ENABLE, LOW);
     Fault::Handler::instance()->onFaultUnlatchEvent(
         Fault::FaultUnlatchEvent::MOVEMENT_COMMAND_END);
 }
 
 void Motion::MotionController::SetCorners(bool corner1, bool corner2,
-                                          bool corner3, bool corner4)
+                                          bool corner3, bool corner4,
+                                          bool raising)
 {
-    // to-do set corners
-    digitalWrite(OUT_TR, corner1);
-    digitalWrite(OUT_TL, corner2);
-    digitalWrite(OUT_BL, corner3);
-    digitalWrite(OUT_BR, corner4);
+    if (raising) {    
+        digitalWrite(OUT_TR_RSE, corner1);
+        digitalWrite(OUT_TL_RSE, corner2);
+        digitalWrite(OUT_BL_RSE, corner3);
+        digitalWrite(OUT_BR_RSE, corner4);
+    } else {
+        digitalWrite(OUT_TR_LWR, corner1);
+        digitalWrite(OUT_TL_LWR, corner2);
+        digitalWrite(OUT_BL_LWR, corner3);
+        digitalWrite(OUT_BR_LWR, corner4);
+    }
 }
 
 void Motion::MotionController::MovementAlgorithmStep()
@@ -121,10 +139,12 @@ void Motion::MotionController::MovementAlgorithmStep()
     SetCorners(m_cornerAlgo.getCorner(0, lowering),
                m_cornerAlgo.getCorner(1, lowering),
                m_cornerAlgo.getCorner(2, lowering),
-               m_cornerAlgo.getCorner(3, lowering));
+               m_cornerAlgo.getCorner(3, lowering),
+               !lowering);
 }
 
-void Motion::MotionController::PopMessage(char* line2) {
+void Motion::MotionController::PopMessage(char *line2)
+{
     Display::DisplayableText t;
     for (int i = 0; i < 4; i++) {
         strncpy(t.array[i], "                    ", 21);
@@ -133,7 +153,8 @@ void Motion::MotionController::PopMessage(char* line2) {
     m_displayController.writeRaw(t);
 }
 
-void Motion::MotionController::DispUpdate() {
+void Motion::MotionController::DispUpdate()
+{
     // Step the display controller
     if (millis() - m_lastDispUpdate > k_dispUpdatePeriodMillis) {
         Display::SystemDisplayState dstate;
@@ -147,8 +168,10 @@ void Motion::MotionController::DispUpdate() {
         dstate.dirn = m_direction;
         dstate.enable = GetState() == MotionStateMachine::STATE_MOVING;
         if (Fault::Handler::instance()->hasFault()) {
-            dstate.faultType = Fault::Handler::instance()->nextFault(Fault::ZERO);
-        } else {
+            dstate.faultType =
+                Fault::Handler::instance()->nextFault(Fault::ZERO);
+        }
+        else {
             dstate.faultType = Fault::ALL_OK;
         }
         m_displayController.update(dstate);

@@ -47,6 +47,7 @@ void setup()
     pinMode(STATUS_PIN, OUTPUT);
     pinMode(FAULT_PIN, OUTPUT);
     pinMode(ZERO_BUTTON, INPUT);
+    pinMode(REFLASH_ACEINNA, INPUT);
     pinMode(RAISE_BUTTON, INPUT);
     pinMode(LOWER_BUTTON, INPUT);
     digitalWrite(STATUS_PIN, LOW);
@@ -101,13 +102,21 @@ void loop()
     status_flash(motionController.GetState());
     digitalWrite(FAULT_PIN, Fault::Handler::instance()->hasFault());
 
-    // Check if the user wanted to zero the accelerometers
-    if (!digitalRead(ZERO_BUTTON) && !(raising || lowering)) {
+    // Check if the user wanted to zero the inclinometer
+    if (digitalRead(ZERO_BUTTON) && !(raising || lowering)) {
         storageManager.getMap()->zeroFrame1 = inclinometer1.zero();
         storageManager.writeMap();
         motionController.PopMessage("RESET LEVEL SENSOR");
         delay(500);
     }
+
+    // Check if the user wanted to reflash the aceinna module
+    if (digitalRead(REFLASH_ACEINNA) && !(raising || lowering)) {
+        aceinna.ProvisionACEINNAInclinometer();
+        motionController.PopMessage("FLASHED SENSE EEPROM");
+        delay(500);
+    }
+
     // avoid thrashing the sensor too much
     delay(10);
 }
