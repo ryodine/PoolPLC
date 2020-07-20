@@ -48,7 +48,7 @@ Vector2d Inclinometer::Model::calculate(Vector2d angleMeasures)
 
     Vector2d calculated = Vector2d(angles[1], angles[0]);
 
-    rollVelocity.addPoint(calculated[0] - lastAngles[0]);     
+    rollVelocity.addPoint(calculated[0] - lastAngles[0]);
     pitchVelocity.addPoint(calculated[1] - lastAngles[1]);
     lastAngles = calculated;
     return calculated;

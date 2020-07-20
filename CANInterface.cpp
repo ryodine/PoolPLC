@@ -73,7 +73,7 @@ void CAN::RawInterface::write(ExtendedCanDataPacket p, bool extBit = true,
                               bool rtrBit = false)
 {
     unsigned char dta[14] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    
+
     unsigned long id = p.id;
     dta[0] = id >> 24;        // id3
     dta[1] = id >> 16 & 0xff; // id2

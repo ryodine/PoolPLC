@@ -49,7 +49,7 @@ class ACEINNAInclinometer : public InclinometerDataSource {
 
     //! Allowed angle range before considering the inclinometer data to be
     //! invalid (degrees)
-    static constexpr double k_anglePlausibilityRange = 5;
+    static constexpr double k_anglePlausibilityRange = 30;
 
     /**
      * @brief PGNs used by this module

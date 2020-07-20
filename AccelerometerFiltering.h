@@ -4,9 +4,9 @@
  * @brief Digital filters for 3-axis accelerometer data
  * @version 0.1
  * @date 2020-05-26
- * 
+ *
  * @copyright Copyright (c) 2020
- * 
+ *
  */
 
 #ifndef ACCELEROMETER_FILTERING_GUARD_H
@@ -16,7 +16,7 @@
 
 /**
  * @brief Exponentially-weighted moving average for 3-axis accelerometers
- * 
+ *
  * @see MovingAverage
  */
 class AccelerometerFilterMovingAverage {

@@ -110,7 +110,7 @@ class ADXL355 {
 
     /**
      * @brief Check if the accelerometer has data ready.
-     * 
+     *
      * @return true if the accelerometer has a reading
      * @return false if the accelerometer does not have a reading yet
      */
@@ -118,7 +118,7 @@ class ADXL355 {
 
     /**
      * @brief return the cached measurement - use after calling takeSample()
-     * 
+     *
      * @return ADXL355Measurement the cahced measurement
      */
     ADXL355Measurement getSample();

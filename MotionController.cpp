@@ -8,30 +8,34 @@
 
 Motion::MotionController::MotionController(Inclinometer::Module &sensor)
     : m_sensor(sensor), m_stateMachine(MotionStateMachine(this)),
-      m_cornerAlgo(0.05 / 180.0 * PI, 0.1 / 180.0 * PI)
+      m_cornerAlgo(Constants::Algorithm::k_stopCorrectingTiltAtDegrees / 180.0 *
+                       PI,
+                   Constants::Algorithm::k_correctTiltAtDegrees / 180.0 * PI)
 {
 }
 
 bool Motion::MotionController::Initialize()
 {
-    pinMode(OUT_TR_RSE, OUTPUT);
-    pinMode(OUT_BR_RSE, OUTPUT);
-    pinMode(OUT_TL_RSE, OUTPUT);
-    pinMode(OUT_BL_RSE, OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::RAM::RAISE_1), OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::RAM::RAISE_2), OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::RAM::RAISE_3), OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::RAM::RAISE_4), OUTPUT);
 
-    pinMode(OUT_TR_LWR, OUTPUT);
-    pinMode(OUT_BR_LWR, OUTPUT);
-    pinMode(OUT_TL_LWR, OUTPUT);
-    pinMode(OUT_BL_LWR, OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::RAM::LOWER_1), OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::RAM::LOWER_2), OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::RAM::LOWER_3), OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::RAM::LOWER_4), OUTPUT);
 
-    pinMode(OUT_ENABLE, OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::MOTOR::ENABLE_RAISE), OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::MOTOR::ENABLE_LOWER), OUTPUT);
 
     // clears all ram disable pins
     SetCorners(false, false, false, false, false);
     SetCorners(false, false, false, false, true);
 
     // disable the output
-    digitalWrite(OUT_ENABLE, LOW);
+    digitalWrite(PIN_CAST(Constants::Pins::MOTOR::ENABLE_RAISE), LOW);
+    digitalWrite(PIN_CAST(Constants::Pins::MOTOR::ENABLE_LOWER), LOW);
 
     m_lastSensorReadingTimestamp = millis();
     m_lastDispUpdate = millis() - k_dispUpdatePeriodMillis;
@@ -40,20 +44,34 @@ bool Motion::MotionController::Initialize()
 
 void Motion::MotionController::RequestRaise()
 {
-    m_stateMachine.RequestState(MotionStateMachine::STATE_MOVEMENT_REQUESTED);
-    m_direction = RAISE;
+    if (GetState() != MotionStateMachine::STATE_FAULTED) {
+        m_stateMachine.RequestState(
+            MotionStateMachine::STATE_MOVEMENT_REQUESTED);
+        m_direction = RAISE;
+    }
 }
 
 void Motion::MotionController::RequestLower()
 {
-    m_stateMachine.RequestState(MotionStateMachine::STATE_MOVEMENT_REQUESTED);
-    m_direction = LOWER;
+    if (GetState() != MotionStateMachine::STATE_FAULTED) {
+        m_stateMachine.RequestState(
+            MotionStateMachine::STATE_MOVEMENT_REQUESTED);
+        m_direction = LOWER;
+    }
 }
 
 void Motion::MotionController::RequestOff()
 {
     m_stateMachine.RequestState(MotionStateMachine::STATE_NOT_RUNNING);
     m_direction = NONE;
+}
+
+void Motion::MotionController::RequestClearFaultState()
+{
+    if (GetState() == MotionStateMachine::STATE_FAULTED &&
+        !Fault::Handler::instance()->hasFault()) {
+        RequestOff();
+    }
 }
 
 void Motion::MotionController::Step()
@@ -101,14 +119,23 @@ void Motion::MotionController::Step()
 void Motion::MotionController::StartMovement()
 {
     Serial.println("Movement started");
-    digitalWrite(OUT_ENABLE, HIGH);
+    switch (m_direction) {
+    case RAISE:
+        digitalWrite(PIN_CAST(Constants::Pins::MOTOR::ENABLE_RAISE), HIGH);
+        break;
+    case LOWER:
+        digitalWrite(PIN_CAST(Constants::Pins::MOTOR::ENABLE_LOWER), HIGH);
+        break;
+    }
 }
 
 void Motion::MotionController::StopMovement()
 {
     Serial.println("Movement halted");
     SetCorners(false, false, false, false, m_direction == RAISE);
-    digitalWrite(OUT_ENABLE, LOW);
+    digitalWrite(PIN_CAST(Constants::Pins::MOTOR::ENABLE_RAISE), LOW);
+    digitalWrite(PIN_CAST(Constants::Pins::MOTOR::ENABLE_LOWER), LOW);
+
     Fault::Handler::instance()->onFaultUnlatchEvent(
         Fault::FaultUnlatchEvent::MOVEMENT_COMMAND_END);
 }
@@ -117,16 +144,17 @@ void Motion::MotionController::SetCorners(bool corner1, bool corner2,
                                           bool corner3, bool corner4,
                                           bool raising)
 {
-    if (raising) {    
-        digitalWrite(OUT_TR_RSE, corner1);
-        digitalWrite(OUT_TL_RSE, corner2);
-        digitalWrite(OUT_BL_RSE, corner3);
-        digitalWrite(OUT_BR_RSE, corner4);
-    } else {
-        digitalWrite(OUT_TR_LWR, corner1);
-        digitalWrite(OUT_TL_LWR, corner2);
-        digitalWrite(OUT_BL_LWR, corner3);
-        digitalWrite(OUT_BR_LWR, corner4);
+    if (raising) {
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_1_RAISE), corner1);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_2_RAISE), corner2);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_3_RAISE), corner3);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_4_RAISE), corner4);
+    }
+    else {
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_1_LOWER), corner1);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_2_LOWER), corner2);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_3_LOWER), corner3);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_4_LOWER), corner4);
     }
 }
 
@@ -139,8 +167,7 @@ void Motion::MotionController::MovementAlgorithmStep()
     SetCorners(m_cornerAlgo.getCorner(0, lowering),
                m_cornerAlgo.getCorner(1, lowering),
                m_cornerAlgo.getCorner(2, lowering),
-               m_cornerAlgo.getCorner(3, lowering),
-               !lowering);
+               m_cornerAlgo.getCorner(3, lowering), !lowering);
 }
 
 void Motion::MotionController::PopMessage(char *line2)

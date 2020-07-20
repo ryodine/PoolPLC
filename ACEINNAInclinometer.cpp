@@ -3,7 +3,8 @@
 #include "CANInterface.h"
 #include "FaultHandling.h"
 
-//! UNCOMMENT BELOW IF YOU WANT TO SET UP THE ACEINNA INCLINOMETER (FIRST TIME)
+//! UNCOMMENT BELOW IF YOU WANT TO FLASH THE INCLINOMETER AT EVERY BOOT (not
+//! recommended)
 //#define PROVISION_CAN_ACEINNA_MODULE
 
 bool Inclinometer::ACEINNAInclinometer::begin()
@@ -12,7 +13,6 @@ bool Inclinometer::ACEINNAInclinometer::begin()
                        CAN::CANBusBaudrate::kbps_250);
 
 #ifdef PROVISION_CAN_ACEINNA_MODULE
-    // define PROVISION_CAN_ACEINNA_MODULE to make the aceinna module be set up once
     ProvisionACEINNAInclinometer();
 #endif
 
@@ -52,7 +52,8 @@ bool Inclinometer::ACEINNAInclinometer::hasData()
                 roll_adjusted < -k_anglePlausibilityRange) {
                 Fault::Handler::instance()->setFaultCode(
                     Fault::INCL_IMPLAUS_READ);
-            } else {
+            }
+            else {
                 Fault::Handler::instance()->unlatchFaultCode(
                     Fault::INCL_IMPLAUS_READ);
             }

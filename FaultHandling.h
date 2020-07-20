@@ -14,7 +14,7 @@
 
 #ifndef ENUM_TO_STRING
 #define __ENUM_TO_STRING__(x) #x
-#define ENUM_TO_STRING(x) __ENUM_TO_STRING__(x)
+#define ENUM_TO_STRING(x)     __ENUM_TO_STRING__(x)
 #endif
 
 namespace Fault {
@@ -23,8 +23,8 @@ namespace Fault {
  * @brief List of system faults
  */
 enum Type {
-  // 20 char limit:     //
-  //--------------------//
+    // 20 char limit:     //
+    //--------------------//
     ZERO,
     INCLINOMETER_INIT,
     INCLINOMETER_INIT2,
@@ -38,33 +38,23 @@ enum Type {
     ALL_OK
 };
 
-const char ecodeName[ALL_OK+1][21] = {
-    ENUM_TO_STRING(ZERO),
-    ENUM_TO_STRING(INCLINOMETER_INIT),
-    ENUM_TO_STRING(INCLINOMETER_INIT2),
-    ENUM_TO_STRING(FRAM_INIT),
-    ENUM_TO_STRING(FATAL_END_SENTINEL),
-    ENUM_TO_STRING(INCLINOMETER_UNREADY),
-    ENUM_TO_STRING(INCL_IMPLAUS_READ),
-    ENUM_TO_STRING(ACCEL_PARITY_FAILURE),
-    ENUM_TO_STRING(RETRYABLE_END_SENTINEL),
-    ENUM_TO_STRING(ALL_OK)
-};
+const char ecodeName[ALL_OK + 1][21] = {ENUM_TO_STRING(ZERO),
+                                        ENUM_TO_STRING(INCLINOMETER_INIT),
+                                        ENUM_TO_STRING(INCLINOMETER_INIT2),
+                                        ENUM_TO_STRING(FRAM_INIT),
+                                        ENUM_TO_STRING(FATAL_END_SENTINEL),
+                                        ENUM_TO_STRING(INCLINOMETER_UNREADY),
+                                        ENUM_TO_STRING(INCL_IMPLAUS_READ),
+                                        ENUM_TO_STRING(ACCEL_PARITY_FAILURE),
+                                        ENUM_TO_STRING(RETRYABLE_END_SENTINEL),
+                                        ENUM_TO_STRING(ALL_OK)};
 
-constexpr char ecodeHelpText[ALL_OK+1][21] = {
-//   20 char limit:     //
-//"--------------------"//
-  "",
-  "Incl. 1 start failed",
-  "Incl. 2 start failed",
-  "Memory module failed",
-  "",
-  "Sensor timed out    ",
-  "Sensor bad reading  ",
-  "Sensor disagreement ",
-  "",
-  "NO SYSTEM ERRORS"
-};
+constexpr char ecodeHelpText[ALL_OK + 1][21] = {
+    //   20 char limit:     //
+    //"--------------------"//
+    "", "Incl. 1 start failed", "Incl. 2 start failed", "Memory module failed",
+    "", "Sensor timed out    ", "Sensor bad reading  ", "Sensor disagreement ",
+    "", "NO SYSTEM ERRORS"};
 
 /**
  * @brief List of system events that can unlatch one or more recoverable faults
@@ -129,7 +119,7 @@ class Handler {
 
     /**
      * @brief Serial logs the current faults
-     * 
+     *
      */
     void printFaultReport();
 
@@ -149,7 +139,7 @@ class Handler {
 
     /**
      * @brief Finds the next fault, starting at start
-     * 
+     *
      * @param start starting fault
      * @return int next fault, or -1 if none
      */

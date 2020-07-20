@@ -15,7 +15,7 @@
 
 #ifndef ENUM_TO_STRING
 #define __ENUM_TO_STRING__(x) #x
-#define ENUM_TO_STRING(x) __ENUM_TO_STRING__(x)
+#define ENUM_TO_STRING(x)     __ENUM_TO_STRING__(x)
 #endif
 
 namespace Motion {
@@ -23,8 +23,8 @@ namespace Motion {
 enum MovementDirection { RAISE, LOWER, NONE };
 
 class MotionController;
-constexpr char* k_motionStateNames[] = {"READY", "STOPPED", "STEADYING", "MOVING", "FAULTED"};
-
+constexpr char *k_motionStateNames[] = {"READY", "STOPPED", "STEADYING",
+                                        "MOVING", "FAULTED"};
 
 class MotionStateMachine {
   public:

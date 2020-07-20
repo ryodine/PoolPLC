@@ -23,10 +23,9 @@ namespace Inclinometer {
  */
 class Module {
   public:
-
     /**
      * @brief Construct a new Module object
-     * 
+     *
      * @param src the sensor data source
      * @param yaw the starting yaw offset, default 0
      */
@@ -37,7 +36,7 @@ class Module {
 
     /**
      * @brief Initializes the contained sensor/data source
-     * 
+     *
      * @return true if the sensor successfully initialized
      * @return false if the sensor did not successfully initialize
      */
@@ -45,7 +44,7 @@ class Module {
 
     /**
      * @brief Checks if the sensor has data
-     * 
+     *
      * @return true if the sensor has data that can be read
      * @return false if the sensor does not have data that can be read
      */
@@ -53,15 +52,16 @@ class Module {
 
     /**
      * @brief Get the calculated angle measures if data is available
-     * 
+     *
      * @return Eigen::Vector2d roll, pitch
      */
     Eigen::Vector2d getData() { return model.calculate(sensor->getData()); };
 
     /**
-     * @brief zero the sensor and return the zero frame from the current measurement
-     * 
-     * @return ModelZeropoint 
+     * @brief zero the sensor and return the zero frame from the current
+     * measurement
+     *
+     * @return ModelZeropoint
      */
     ModelZeropoint zero()
     {
@@ -70,17 +70,17 @@ class Module {
 
     /**
      * @brief import a zero frame and zero the sensor to it
-     * 
+     *
      * @param zero the zero frame to zero the sensor to
      */
     void importZero(ModelZeropoint zero) { return model.importZero(zero); };
 
     /**
      * @brief Get the model contained in the module
-     * 
+     *
      * @return Model
      */
-    Model& getModel() { return model; };
+    Model &getModel() { return model; };
 
   private:
     InclinometerDataSource *sensor;

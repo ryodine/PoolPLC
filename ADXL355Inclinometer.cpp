@@ -1,4 +1,5 @@
 #include "ADXL355Inclinometer.h"
+
 #include "FaultHandling.h"
 
 Eigen::Vector2d Inclinometer::ADXL355Inclinometer::getData()
@@ -12,8 +13,7 @@ Eigen::Vector2d Inclinometer::ADXL355Inclinometer::getData()
     double scale = sqrt(pow(measure.x / 16.0, 2) + pow(measure.y / 16.0, 2) +
                         pow(measure.z / 16.0, 2));
     if (scale > 1.0 + gBand || scale < 1.0 - gBand) {
-        Fault::Handler::instance()->setFaultCode(
-            Fault::INCL_IMPLAUS_READ);
+        Fault::Handler::instance()->setFaultCode(Fault::INCL_IMPLAUS_READ);
     }
 
     // Apply EWMA filtering

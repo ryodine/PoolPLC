@@ -20,44 +20,27 @@
 namespace Display {
 
 /**
- * 20x4 display template
- *
- * +--------------------+
- * |                    |
- * |                    |
- * |                    |
- * |                    |
- * +--------------------+
- */
-
-/**
  * Normal Operation
  *
  * +--------------------+
- * |LOWERING   P:-360.00|
- * |SYS OK     R:-360.00|
- * | 1    2    3    4   |
- * | OK   OK   HALT HALT|
+ * |MOVING     P:-360.00|
+ * |RAISING    R:-360.00|
+ * |-1-- -2-- -3-- -4-- |
+ * |OK   OK   HALT HALT |
  * +--------------------+
  *
  * +--------------------+
  * |STOPPED    P:-360.00|
- * |SYS OK     R:-360.00|
- * | 1    2    3    4   |
- * | HALT HALT HALT HALT|
+ * |SYSTEM OK  R:-360.00|
+ * |-1-- -2-- -3-- -4-- |
+ * |OFF  OFF  OFF  OFF  |
  * +--------------------+
  *
- * +--------------------+
- * |RAISING    P:-360.00|
- * |SYS OK     R:-360.00|
- * | 1    2    3    4   |
- * | OK   OK   OK   OK  |
- * +--------------------+
  */
 
 /**
  * FAULT
- *
+ * Fault conditions active:
  * +--------------------+
  * | /!\ Fault Detected | <--- Fault header
  * |INCLINOMETER_INIT   | <--- error code
@@ -70,6 +53,14 @@ namespace Display {
  * |INCLINOMETER_UNREADY| <--- error code
  * | (please try again) | <--- Recoverable or non-recoverable fault
  * |Sensor timed out    | <--- Short human-readable
+ * +--------------------+
+ *
+ * Fault condition latched:
+ * +--------------------+
+ * |FAULTED    P:-360.00|
+ * |CAN RESUME R:-360.00|
+ * |-1-- -2-- -3-- -4-- |
+ * |OFF  OFF  OFF  OFF  |
  * +--------------------+
  */
 
@@ -100,8 +91,9 @@ class Controller {
   public:
     Controller() : lcd{0} {};
     bool begin();
-    void writeRaw(DisplayableText& t);
+    void writeRaw(DisplayableText &t);
     void update(SystemDisplayState &state);
+
   private:
     Adafruit_LiquidCrystal lcd;
 };

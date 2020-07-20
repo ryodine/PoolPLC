@@ -13,11 +13,11 @@
 #ifndef MOTION_CONTROLLER_GUARD_H
 #define MOTION_CONTROLLER_GUARD_H
 
+#include "Constants.h"
+#include "DisplayControl.h"
 #include "HighestCornerAlgorithm.h"
 #include "InclinometerModule.h"
 #include "MotionStateMachine.h"
-#include "PinMappings.h"
-#include "DisplayControl.h"
 
 #include <stlport.h>
 
@@ -27,10 +27,32 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-namespace Motion {
-
+namespace {
 constexpr int k_dispUpdatePeriodMillis = 1000;
 
+/**
+ * @brief The hydraulic rams in the highest corner algorithm use a different
+ * numbering convention than the convention used onsite. This map transalates
+ * the conventions.
+ *
+ * @details THe highest corner algorithm's convention is to use the quadrant
+ * number of a 2d coordinate plane as the ram number. The quadrant is defined by
+ * sensor pitch representing the y-axis, and sensor roll representing the
+ * x-axis.
+ */
+enum class CORNER_REMAPPER {
+    RAM_1_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_1),
+    RAM_1_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_1),
+    RAM_2_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_2),
+    RAM_2_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_2),
+    RAM_3_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_3),
+    RAM_3_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_3),
+    RAM_4_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_4),
+    RAM_4_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_4)
+};
+} // namespace
+
+namespace Motion {
 class MotionController {
   public:
     MotionController(Inclinometer::Module &sensor);
@@ -58,6 +80,11 @@ class MotionController {
      */
     void RequestOff();
 
+    /**
+     * @brief Requests that the controller transition to lowering mode
+     */
+    void RequestClearFaultState();
+
     Eigen::Vector2d GetLastMeasures() { return m_lastSensorMeasures; };
 
     /**
@@ -67,17 +94,25 @@ class MotionController {
 
     /**
      * @brief Get the State of the state machine
-     * 
+     *
      * @return MotionStateMachine::STATE current state of the state machine
      */
     MotionStateMachine::STATE GetState() { return m_stateMachine.GetState(); }
 
     /**
-     * @brief Shows a brief message on screen, will disappear on next update of motion controller
-     * 
+     * @brief Get the Direction of movement
+     *
+     * @return MovementDirection
+     */
+    MovementDirection GetDirection() { return m_direction; }
+
+    /**
+     * @brief Shows a brief message on screen, will disappear on next update of
+     * motion controller
+     *
      * @param line2 text to show on line 2
      */
-    void PopMessage(char* line2);
+    void PopMessage(char *line2);
 
   private:
     Inclinometer::Module &m_sensor;
@@ -96,7 +131,8 @@ class MotionController {
     // Callback hooks from state machine:
     void StartMovement();
     void StopMovement();
-    void SetCorners(bool corner1, bool corner2, bool corner3, bool corner4, bool raising);
+    void SetCorners(bool corner1, bool corner2, bool corner3, bool corner4,
+                    bool raising);
     void MovementAlgorithmStep();
     bool CheckStabilityStep();
 

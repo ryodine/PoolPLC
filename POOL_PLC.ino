@@ -4,18 +4,19 @@
  * @brief Main program for the Pool PLC
  * @version 0.1
  * @date 2020-06-13
- * 
+ *
  * @copyright Copyright (c) 2020
- * 
+ *
  */
 
 #include "ACEINNAInclinometer.h"
+#include "Constants.h"
 #include "FaultHandling.h"
 #include "InclinometerModel.h"
 #include "InclinometerModule.h"
-#include "PersistentStorage.h"
 #include "MotionController.h"
-#include "PinMappings.h"
+#include "MotionStateMachine.h"
+#include "PersistentStorage.h"
 
 #include <stlport.h>
 
@@ -28,12 +29,14 @@
 #include <Eigen/Geometry>
 #include <SPI.h>
 
-
 Fault::Handler *faultHandler;
 PersistentStorage::Manager storageManager;
 
-Inclinometer::ACEINNAInclinometer aceinna(Serial2, 0.5);
-Inclinometer::Module inclinometer1(&aceinna, 0.0);
+Inclinometer::ACEINNAInclinometer
+    aceinna(Serial2, Constants::Algorithm::k_inclinometerEWMASmoothingAlpha);
+Inclinometer::Module
+    inclinometer1(&aceinna,
+                  Constants::Physical::k_inclinometerInstalledYawAdjustment);
 
 Motion::MotionController motionController(inclinometer1);
 
@@ -42,31 +45,52 @@ bool lowering = false;
 
 void setup()
 {
-    faultHandler = Fault::Handler::instance();
-    // put your setup code here, to run once:
-    pinMode(STATUS_PIN, OUTPUT);
-    pinMode(FAULT_PIN, OUTPUT);
-    pinMode(ZERO_BUTTON, INPUT);
-    pinMode(REFLASH_ACEINNA, INPUT);
-    pinMode(RAISE_BUTTON, INPUT);
-    pinMode(LOWER_BUTTON, INPUT);
-    digitalWrite(STATUS_PIN, LOW);
+    //! Output and Input setup ===============
+    //! some outputs are also configured
+    //! in the motion controller
+    pinMode(PIN_CAST(Constants::Pins::INDICATOR::FAULT_ACTIVE), OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::INDICATOR::FAULT_CLEARABLE), OUTPUT);
+    pinMode(PIN_CAST(Constants::Pins::INDICATOR::READY), OUTPUT);
 
-    SPI.begin();
+    pinMode(PIN_CAST(Constants::Pins::BUTTON::ZERO), INPUT);
+    pinMode(PIN_CAST(Constants::Pins::BUTTON::REFLASH_ACEINNA), INPUT);
+    pinMode(PIN_CAST(Constants::Pins::BUTTON::RAISE), INPUT);
+    pinMode(PIN_CAST(Constants::Pins::BUTTON::LOWER), INPUT);
+    pinMode(PIN_CAST(Constants::Pins::BUTTON::CLEAR_FAULT), INPUT);
+
+    //! Declarations ==========================
+    faultHandler = Fault::Handler::instance();
+
+    //! Initializations =======================
+
+    // Turn off all indicators
+    digitalWrite(PIN_CAST(Constants::Pins::INDICATOR::FAULT_ACTIVE), LOW);
+    digitalWrite(PIN_CAST(Constants::Pins::INDICATOR::FAULT_CLEARABLE), LOW);
+    digitalWrite(PIN_CAST(Constants::Pins::INDICATOR::READY), LOW);
+
+    // Begin debugging interface (Serial)
     Serial.begin(9600);
     Serial.println("Starting up");
-    if (!inclinometer1.begin()) {
-        faultHandler->setFaultCode(Fault::INCLINOMETER_INIT);
-    }
-    Serial.println("Inclinometer began");
+
+    // Setup storage
     if (!storageManager.begin()) {
         faultHandler->setFaultCode(Fault::FRAM_INIT);
     }
     Serial.println("Storage began");
+
+    // Setup inclinometer
+    if (!inclinometer1.begin()) {
+        faultHandler->setFaultCode(Fault::INCLINOMETER_INIT);
+    }
+    Serial.println("Inclinometer began");
     storageManager.readMap();
     inclinometer1.importZero(storageManager.getMap()->zeroFrame1);
+
+    // Initialize the motion controller
     motionController.Initialize();
-    motionController.Step(); // Step the motion controller once to show any active faults
+    motionController
+        .Step(); // Step the motion controller once to show any active faults
+
     Serial.println("Initialized");
 }
 
@@ -76,12 +100,11 @@ void setup()
  */
 void loop()
 {
-
     // Determine if raising or lowering
-    bool wasRaising = raising;
-    bool wasLowering = lowering;
-    raising = digitalRead(RAISE_BUTTON);
-    lowering = digitalRead(LOWER_BUTTON);
+    bool wasRaising = motionController.GetDirection() == Motion::RAISE;
+    bool wasLowering = motionController.GetDirection() == Motion::LOWER;
+    raising = digitalRead(PIN_CAST(Constants::Pins::BUTTON::RAISE));
+    lowering = digitalRead(PIN_CAST(Constants::Pins::BUTTON::LOWER));
     raising = raising && !lowering;
     lowering = lowering && !raising;
 
@@ -99,21 +122,27 @@ void loop()
 
     // Step the motion controller
     motionController.Step();
-    status_flash(motionController.GetState());
-    digitalWrite(FAULT_PIN, Fault::Handler::instance()->hasFault());
 
-    // Check if the user wanted to zero the inclinometer
-    if (digitalRead(ZERO_BUTTON) && !(raising || lowering)) {
-        storageManager.getMap()->zeroFrame1 = inclinometer1.zero();
-        storageManager.writeMap();
-        motionController.PopMessage("RESET LEVEL SENSOR");
-        delay(500);
+    // Update indicators
+    indicator_step(motionController.GetState());
+
+    // Check if the user wanted to clear faults
+    if (digitalRead(PIN_CAST(Constants::Pins::BUTTON::CLEAR_FAULT))) {
+        motionController.RequestClearFaultState();
     }
 
     // Check if the user wanted to reflash the aceinna module
-    if (digitalRead(REFLASH_ACEINNA) && !(raising || lowering)) {
+    if (digitalRead(PIN_CAST(Constants::Pins::BUTTON::REFLASH_ACEINNA))) {
         aceinna.ProvisionACEINNAInclinometer();
         motionController.PopMessage("FLASHED SENSE EEPROM");
+        delay(500);
+    }
+
+    // Check if the user wanted to zero the inclinometer
+    if (digitalRead(PIN_CAST(Constants::Pins::BUTTON::ZERO))) {
+        storageManager.getMap()->zeroFrame1 = inclinometer1.zero();
+        storageManager.writeMap();
+        motionController.PopMessage("RESET LEVEL SENSOR");
         delay(500);
     }
 
@@ -121,29 +150,18 @@ void loop()
     delay(10);
 }
 
-bool flash = false;
-unsigned long last_pulse_at = 0;
-void status_flash(Motion::MotionStateMachine::STATE state)
+void indicator_step(Motion::MotionStateMachine::STATE state)
 {
-    switch (state) {
-        case Motion::MotionStateMachine::STATE_MOVING:
-            digitalWrite(STATUS_PIN, HIGH);
-            break;
-        case Motion::MotionStateMachine::STATE_MOVEMENT_REQUESTED:
-            if (millis() - last_pulse_at > 500) {
-                flash = !flash;
-                last_pulse_at = millis();
-                digitalWrite(STATUS_PIN, flash);
-            }
-            break;
-        case Motion::MotionStateMachine::STATE_FAULTED:
-            if (millis() - last_pulse_at > 50) {
-                flash = !flash;
-                last_pulse_at = millis();
-                digitalWrite(STATUS_PIN, flash);
-            }
-            break;
-        default:
-            digitalWrite(STATUS_PIN, LOW);
-    }
+    // Fault indicator
+    digitalWrite(PIN_CAST(Constants::Pins::INDICATOR::FAULT_ACTIVE),
+                 Fault::Handler::instance()->hasFault());
+
+    // Ready indicator
+    digitalWrite(PIN_CAST(Constants::Pins::INDICATOR::READY),
+                 state == Motion::MotionStateMachine::STATE_MOVING);
+
+    // Fault clearable indicator
+    digitalWrite(PIN_CAST(Constants::Pins::INDICATOR::FAULT_CLEARABLE),
+                 state == Motion::MotionStateMachine::STATE_FAULTED &&
+                     !Fault::Handler::instance()->hasFault());
 }

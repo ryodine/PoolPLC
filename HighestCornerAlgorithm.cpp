@@ -1,4 +1,5 @@
 #include "HighestCornerAlgorithm.h"
+
 #include <cmath>
 
 void HighestCornerAlgo::update(double roll, double pitch)

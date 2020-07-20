@@ -8,7 +8,8 @@ void PersistentStorage::Manager::readMap()
     }
 }
 
-void PersistentStorage::Manager::writeMap() {
+void PersistentStorage::Manager::writeMap()
+{
     uint8_t *mapBuffer = (uint8_t *)&storageMap;
     for (unsigned int i = 0; i < sizeof(Map); i++) {
         fram.write8(i, mapBuffer[i]);

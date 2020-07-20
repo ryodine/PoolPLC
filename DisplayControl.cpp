@@ -55,14 +55,19 @@ DisplayableText DisplayViewNormal::Render(const SystemDisplayState &dispState)
     if (dispState.motionState == Motion::MotionStateMachine::STATE_MOVING) {
         if (dispState.dirn == Motion::MovementDirection::RAISE) {
             snprintf(text.line_struct.line2, 21, "RAISING    R:%7s", roll);
-        } else if (dispState.dirn == Motion::MovementDirection::LOWER) {
+        }
+        else if (dispState.dirn == Motion::MovementDirection::LOWER) {
             snprintf(text.line_struct.line2, 21, "LOWERING   R:%7s", roll);
-        } else {
+        }
+        else {
             snprintf(text.line_struct.line2, 21, "OFF        R:%7s", roll);
         }
-    } else if (dispState.motionState == Motion::MotionStateMachine::STATE_FAULTED) {
+    }
+    else if (dispState.motionState ==
+             Motion::MotionStateMachine::STATE_FAULTED) {
         snprintf(text.line_struct.line2, 21, "CAN RESUME R:%7s", roll);
-    } else {
+    }
+    else {
         snprintf(text.line_struct.line2, 21, "SYSTEM OK  R:%7s", roll);
     }
     strncpy(text.line_struct.line3, "-1-- -2-- -3-- -4-- ", 21);

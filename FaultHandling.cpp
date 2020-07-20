@@ -1,5 +1,7 @@
 #include "FaultHandling.h"
+
 #include "Arduino.h"
+
 
 Fault::Handler *Fault::Handler::inst = 0;
 
@@ -34,7 +36,7 @@ void Fault::Handler::unlatchFaultCode(Type fault)
 
 void Fault::Handler::onFaultUnlatchEvent(FaultUnlatchEvent event)
 {
-    bool* evtTriggers = k_faultUnlatchMapping[event];
+    bool *evtTriggers = k_faultUnlatchMapping[event];
     for (int i = 0; i < RETRYABLE_END_SENTINEL - FATAL_END_SENTINEL; ++i) {
         if (evtTriggers[i]) {
             unlatchFaultCode(FATAL_END_SENTINEL + 1 + i);
