@@ -112,6 +112,17 @@ void Motion::MotionController::Step()
         Fault::Handler::instance()->setFaultCode(Fault::INCLINOMETER_UNREADY);
     }
 
+    if (m_lastSensorMeasures[0] >
+            Constants::Algorithm::k_maximumAllowableTiltRange ||
+        m_lastSensorMeasures[0] <
+            -Constants::Algorithm::k_maximumAllowableTiltRange ||
+        m_lastSensorMeasures[1] >
+            Constants::Algorithm::k_maximumAllowableTiltRange ||
+        m_lastSensorMeasures[1] <
+            -Constants::Algorithm::k_maximumAllowableTiltRange) {
+        Fault::Handler::instance()->setFaultCode(Fault::TOO_MUCH_TILT);
+    }
+
     DispUpdate();
     m_stateMachine.Step();
 }
@@ -174,8 +185,8 @@ void Motion::MotionController::MovementAlgorithmStep()
     bool lowering = m_direction == LOWER;
 
     // Control the solenoids, if no faults and in raise or lower mode
-    // The algorithm provides the deviating corners. We need to only enable the
-    // movement on the "good" corners, so we invert the output
+    // The algorithm provides the deviating corners. We need to only enable
+    // the movement on the "good" corners, so we invert the output
     SetCorners(!m_cornerAlgo.getCorner(0, lowering),
                !m_cornerAlgo.getCorner(1, lowering),
                !m_cornerAlgo.getCorner(2, lowering),

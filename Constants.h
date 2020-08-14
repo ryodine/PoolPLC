@@ -24,6 +24,10 @@ constexpr double k_correctTiltAtDegrees = 0.1;
 //! deviations within
 constexpr double k_stopCorrectingTiltAtDegrees = 0.05;
 
+//! The maximum amount of deviation from level before throwing a fault.
+//! This is an imporant safeguard against a ram failing to move!
+constexpr double k_maximumAllowableTiltRange = 10.0;
+
 //! The alpha for exponentially weighted average smoothing on the inclinometer
 //! (higher = less smoothing)
 constexpr double k_inclinometerEWMASmoothingAlpha = 0.5;

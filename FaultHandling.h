@@ -34,6 +34,7 @@ enum Type {
     INCLINOMETER_UNREADY,
     INCL_IMPLAUS_READ,
     ACCEL_PARITY_FAILURE,
+    TOO_MUCH_TILT,
     RETRYABLE_END_SENTINEL,
     ALL_OK
 };
@@ -46,15 +47,24 @@ const char ecodeName[ALL_OK + 1][21] = {ENUM_TO_STRING(ZERO),
                                         ENUM_TO_STRING(INCLINOMETER_UNREADY),
                                         ENUM_TO_STRING(INCL_IMPLAUS_READ),
                                         ENUM_TO_STRING(ACCEL_PARITY_FAILURE),
+                                        ENUM_TO_STRING(TOO_MUCH_TILT),
                                         ENUM_TO_STRING(RETRYABLE_END_SENTINEL),
                                         ENUM_TO_STRING(ALL_OK)};
 
 constexpr char ecodeHelpText[ALL_OK + 1][21] = {
     //   20 char limit:     //
     //"--------------------"//
-    "", "Incl. 1 start failed", "Incl. 2 start failed", "Memory module failed",
-    "", "Sensor timed out    ", "Sensor bad reading  ", "Sensor disagreement ",
-    "", "NO SYSTEM ERRORS"};
+    "",
+    "Incl. 1 start failed",
+    "Incl. 2 start failed",
+    "Memory module failed",
+    "",
+    "Sensor timed out    ",
+    "Sensor bad reading  ",
+    "Sensor disagreement ",
+    "Too much tilt!"
+    "",
+    "NO SYSTEM ERRORS"};
 
 /**
  * @brief List of system events that can unlatch one or more recoverable faults
