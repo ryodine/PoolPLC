@@ -41,14 +41,22 @@ constexpr int k_dispUpdatePeriodMillis = 1000;
  * x-axis.
  */
 enum class CORNER_REMAPPER {
-    RAM_1_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_1),
-    RAM_1_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_1),
-    RAM_2_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_2),
-    RAM_2_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_2),
-    RAM_3_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_3),
-    RAM_3_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_3),
-    RAM_4_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_4),
-    RAM_4_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_4)
+    RAM_1_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_2),
+    RAM_1_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_2),
+    RAM_2_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_3),
+    RAM_2_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_3),
+    RAM_3_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_4),
+    RAM_3_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_4),
+    RAM_4_RAISE = PIN_CAST(Constants::Pins::RAM::RAISE_1),
+    RAM_4_LOWER = PIN_CAST(Constants::Pins::RAM::LOWER_1)
+};
+//! "logical" version of the above remapping, for the debug display. The above
+//! version is a remapping of actual outputs
+enum class CORNER_REMAPPER_LOGICAL {
+    RAM_1 = 3,
+    RAM_2 = 0,
+    RAM_3 = 1,
+    RAM_4 = 2
 };
 } // namespace
 

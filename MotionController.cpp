@@ -149,12 +149,22 @@ void Motion::MotionController::SetCorners(bool corner1, bool corner2,
         digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_2_RAISE), corner2);
         digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_3_RAISE), corner3);
         digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_4_RAISE), corner4);
+
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_1_LOWER), false);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_2_LOWER), false);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_3_LOWER), false);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_4_LOWER), false);
     }
     else {
         digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_1_LOWER), corner1);
         digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_2_LOWER), corner2);
         digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_3_LOWER), corner3);
         digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_4_LOWER), corner4);
+
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_1_RAISE), false);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_2_RAISE), false);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_3_RAISE), false);
+        digitalWrite(PIN_CAST(CORNER_REMAPPER::RAM_4_RAISE), false);
     }
 }
 
@@ -164,10 +174,12 @@ void Motion::MotionController::MovementAlgorithmStep()
     bool lowering = m_direction == LOWER;
 
     // Control the solenoids, if no faults and in raise or lower mode
-    SetCorners(m_cornerAlgo.getCorner(0, lowering),
-               m_cornerAlgo.getCorner(1, lowering),
-               m_cornerAlgo.getCorner(2, lowering),
-               m_cornerAlgo.getCorner(3, lowering), !lowering);
+    // The algorithm provides the deviating corners. We need to only enable the
+    // movement on the "good" corners, so we invert the output
+    SetCorners(!m_cornerAlgo.getCorner(0, lowering),
+               !m_cornerAlgo.getCorner(1, lowering),
+               !m_cornerAlgo.getCorner(2, lowering),
+               !m_cornerAlgo.getCorner(3, lowering), !lowering);
 }
 
 void Motion::MotionController::PopMessage(char *line2)
@@ -188,10 +200,18 @@ void Motion::MotionController::DispUpdate()
         dstate.motionState = GetState();
         dstate.pitch = m_sensor.getData()[1] * 180.0 / PI;
         dstate.roll = m_sensor.getData()[0] * 180.0 / PI;
-        dstate.ram1 = m_cornerAlgo.getCorner(0, m_direction == LOWER);
-        dstate.ram2 = m_cornerAlgo.getCorner(1, m_direction == LOWER);
-        dstate.ram3 = m_cornerAlgo.getCorner(2, m_direction == LOWER);
-        dstate.ram4 = m_cornerAlgo.getCorner(3, m_direction == LOWER);
+        dstate.ram1 = m_cornerAlgo.getCorner(
+            static_cast<unsigned int>(CORNER_REMAPPER_LOGICAL::RAM_1),
+            m_direction == LOWER);
+        dstate.ram2 = m_cornerAlgo.getCorner(
+            static_cast<unsigned int>(CORNER_REMAPPER_LOGICAL::RAM_2),
+            m_direction == LOWER);
+        dstate.ram3 = m_cornerAlgo.getCorner(
+            static_cast<unsigned int>(CORNER_REMAPPER_LOGICAL::RAM_3),
+            m_direction == LOWER);
+        dstate.ram4 = m_cornerAlgo.getCorner(
+            static_cast<unsigned int>(CORNER_REMAPPER_LOGICAL::RAM_4),
+            m_direction == LOWER);
         dstate.dirn = m_direction;
         dstate.enable = GetState() == MotionStateMachine::STATE_MOVING;
         if (Fault::Handler::instance()->hasFault()) {

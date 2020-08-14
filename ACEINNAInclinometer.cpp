@@ -43,7 +43,7 @@ bool Inclinometer::ACEINNAInclinometer::hasData()
                                  ((unsigned long)data[4]) << 8 |
                                  ((unsigned long)data[3]);
 
-            double pitch_adjusted = (pitch * (1.0 / 32768) - 250.0);
+            double pitch_adjusted = -(pitch * (1.0 / 32768) - 250.0);
             double roll_adjusted = (roll * (1.0 / 32768) - 250.0);
 
             if (pitch_adjusted > k_anglePlausibilityRange ||
